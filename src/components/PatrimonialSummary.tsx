@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatsCard } from "@/components/StatsCard";
 import { ObjectivesModal } from "@/components/ObjectivesModal";
+import { ChoroplethMap } from "@/components/ChoroplethMap";
 import { UserData } from "@/components/PatrimonialChat";
 import { TrendingUp, Users, Award, Target, Sparkles, Calendar, ExternalLink } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -270,6 +271,21 @@ export function PatrimonialSummary({ userData }: PatrimonialSummaryProps) {
           />
         )}
       </div>
+
+      {/* France Map */}
+      <Card className="p-6">
+        <h3 className="text-lg font-bold mb-4 text-center">Votre position géographique</h3>
+        <ChoroplethMap 
+          departements={[
+            { id: userData.zipcode?.substring(0, 2) || '75', avgSavingRate: 18.5 },
+            { id: '13', avgSavingRate: 16.2 },
+            { id: '69', avgSavingRate: 19.8 },
+            { id: '59', avgSavingRate: 15.1 },
+            { id: '31', avgSavingRate: 17.9 }
+          ]}
+          userDept={userData.zipcode?.substring(0, 2) || '75'}
+        />
+      </Card>
 
       <Card className="p-6 text-center bg-gradient-to-r from-success/5 to-primary/5">
         <Award className="w-12 h-12 mx-auto mb-4 text-success" />

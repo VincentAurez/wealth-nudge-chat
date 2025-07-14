@@ -51,8 +51,8 @@ export function ObjectivesModal({ isOpen, onClose, userData }: ObjectivesModalPr
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg rounded-2xl bg-muted/50 backdrop-blur-sm">
+    <Dialog modal open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="z-50 max-w-lg rounded-2xl bg-muted/50 backdrop-blur-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <div className="p-2 bg-primary rounded-lg text-primary-foreground">

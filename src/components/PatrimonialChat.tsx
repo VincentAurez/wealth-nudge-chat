@@ -9,8 +9,20 @@ import { Slider } from "@/components/ui/slider";
 import { StatsCard } from "@/components/StatsCard";
 import { PatrimonialSummary } from "@/components/PatrimonialSummary";
 import { GamificationBadges } from "@/components/GamificationBadges";
+import { FunFactCard } from "@/components/FunFactCard";
+import { DecileTooltip } from "@/components/DecileTooltip";
+import { StickyCTA } from "@/components/StickyCTA";
 import { Send, TrendingUp, Users, Award, Target, Sparkles, Home, MapPin, Flag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+const FUN_FACTS = [
+  "💡 1 Français sur 3 vit seul – mais seulement 47 % des personnes seules sont propriétaires.",
+  "🏠 Les couples sans enfant atteignent 78 % de taux de propriété immobilière.",
+  "👶 Les familles monoparentales ont un taux d'épargne 3 × plus bas que la moyenne.",
+  "⚙️ Les indépendants épargnent en moyenne 35 % de leur revenu – record national.",
+  "📊 En France, 60% des ménages possèdent moins de 3 mois de salaire d'épargne de précaution.",
+  "💰 Le patrimoine médian des Français est de 113 900€ mais varie énormément selon l'âge et la région."
+];
 
 export interface UserData {
   age?: number;
@@ -164,6 +176,7 @@ export function PatrimonialChat() {
   const [steps, setSteps] = useState(chatSteps);
   const [askingPhone, setAskingPhone] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [funFact, setFunFact] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -376,8 +389,12 @@ export function PatrimonialChat() {
     newSteps[currentStep].completed = true;
     setSteps(newSteps);
 
-    // Generate insights
+    // Generate insights and fun fact
     const insightData = generateInsights(currentStepData.field, processedValue);
+    
+    // Generate a random fun fact after step responses
+    const randomFunFact = FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)];
+    setFunFact(randomFunFact);
     
     const assistantMessage: Message = {
       id: (Date.now() + 1).toString(),
@@ -642,6 +659,16 @@ export function PatrimonialChat() {
           <PatrimonialSummary userData={userData} />
         )}
       </div>
+
+      {/* Sticky CTA after step 3 */}
+      {currentStep >= 3 && <StickyCTA />}
+      
+      {/* Fun fact */}
+      {funFact && (
+        <div className="mt-4">
+          <FunFactCard text={funFact} />
+        </div>
+      )}
     </div>
   );
 }
