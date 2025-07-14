@@ -202,7 +202,7 @@ export function PatrimonialChat() {
     {
       id: '1',
       type: 'assistant',
-      content: "Bienvenue dans votre parcours patrimonial personnalisé ! Je suis là pour vous aider à mieux comprendre votre situation financière par rapport aux autres Français. Plus vous me donnerez d'informations, plus je pourrai vous éclairer sur votre positionnement. Commençons !"
+      content: chatSteps[0].question
     }
   ]);
   
@@ -219,7 +219,10 @@ export function PatrimonialChat() {
   const [steps, setSteps] = useState(chatSteps);
   const [askingPhone, setAskingPhone] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
-  const [funFact, setFunFact] = useState<{text: string, source: string} | null>(null);
+  const [funFact, setFunFact] = useState<{text: string, source: string} | null>({
+    text: "🚀 Saviez-vous que 86,9% des Français ont un livret d'épargne, mais seulement 17,4% investissent en Bourse ? Découvrons ensemble votre profil !",
+    source: "Insee Focus 2024"
+  });
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [showValueAdded, setShowValueAdded] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -718,18 +721,38 @@ const generateContextualFunFact = (step: number, fieldName: keyof UserData, valu
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-primary/5 p-4">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
-        <div className="text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-accent rounded-full text-white font-medium">
+        <motion.div 
+          className="text-center space-y-4"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <motion.div 
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-accent rounded-full text-white font-medium"
+            whileHover={{ scale: 1.05 }}
+            animate={{ rotate: [0, 1, -1, 0] }}
+            transition={{ duration: 4, repeat: Infinity }}
+          >
             <Award className="w-5 h-5" />
             Combien je pèse ?
-          </div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          </motion.div>
+          <motion.h1 
+            className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+          >
             Découvrez votre poids patrimonial
-          </h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
+          </motion.h1>
+          <motion.p 
+            className="text-muted-foreground max-w-2xl mx-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+          >
             Évaluez votre situation financière et comparez-vous aux autres Français en quelques questions simples
-          </p>
-        </div>
+          </motion.p>
+        </motion.div>
 
         {/* Progress */}
         <Card className="p-6">
