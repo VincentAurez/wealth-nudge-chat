@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { StatsCard } from "@/components/StatsCard";
 import { ObjectivesModal } from "@/components/ObjectivesModal";
 import { ChoroplethMap } from "@/components/ChoroplethMap";
+import { PatrimonialCharts } from "@/components/PatrimonialCharts";
 import { UserData } from "@/components/PatrimonialChat";
 import { TrendingUp, Users, Award, Target, Sparkles, Calendar, ExternalLink } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -272,9 +273,12 @@ export function PatrimonialSummary({ userData }: PatrimonialSummaryProps) {
         )}
       </div>
 
+      {/* Charts Section */}
+      <PatrimonialCharts userData={userData} />
+
       {/* France Map */}
       <Card className="p-6">
-        <h3 className="text-lg font-bold mb-4 text-center">Votre position géographique</h3>
+        <h3 className="text-lg font-bold mb-4 text-center">🗺️ Votre position géographique</h3>
         <ChoroplethMap 
           departements={[
             { id: userData.zipcode?.substring(0, 2) || '75', avgSavingRate: 18.5 },

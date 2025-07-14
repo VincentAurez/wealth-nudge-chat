@@ -72,8 +72,13 @@ export function StatsCard({ title, value, comparison, percentile, trend, categor
       {percentile !== undefined && (
         <div className="mb-3">
           <div className="flex justify-between text-xs text-muted-foreground mb-1">
-            <span>Position</span>
-            <span>{percentile}e percentile</span>
+            <span>Votre position</span>
+            <span>
+              {percentile <= 25 ? "Parmi les 25% les plus modestes" :
+               percentile <= 50 ? "Dans la moyenne française" :
+               percentile <= 75 ? "Au-dessus de la moyenne" :
+               "Dans le top 25% français"}
+            </span>
           </div>
           <Progress value={percentile} className="h-2" />
         </div>

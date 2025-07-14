@@ -10,7 +10,7 @@ import { StatsCard } from "@/components/StatsCard";
 import { PatrimonialSummary } from "@/components/PatrimonialSummary";
 import { GamificationBadges } from "@/components/GamificationBadges";
 import { FunFactCard } from "@/components/FunFactCard";
-import { DecileTooltip } from "@/components/DecileTooltip";
+import { PositionTooltip } from "@/components/PositionTooltip";
 import { StickyCTA } from "@/components/StickyCTA";
 import { SortableGoals } from "@/components/SortableGoals";
 import { ValueAddedCard } from "@/components/ValueAddedCard";
@@ -620,13 +620,13 @@ export function PatrimonialChat() {
         <div className="text-center space-y-4">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-accent rounded-full text-white font-medium">
             <Award className="w-5 h-5" />
-            Conseil Patrimonial Gamifié
+            Combien je pèse ?
           </div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Découvrez votre position patrimoniale
+            Découvrez votre poids patrimonial
           </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Répondez à quelques questions et découvrez comment vous vous situez par rapport aux autres Français
+            Évaluez votre situation financière et comparez-vous aux autres Français en quelques questions simples
           </p>
         </div>
 
