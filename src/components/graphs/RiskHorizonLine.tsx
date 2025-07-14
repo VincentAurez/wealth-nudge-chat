@@ -10,12 +10,23 @@ interface RiskHorizonLineProps {
 }
 
 export function RiskHorizonLine({ data }: RiskHorizonLineProps) {
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  interface TooltipItem {
+    name: string;
+    value: number;
+    color: string;
+  }
+  interface TooltipProps {
+    active?: boolean;
+    payload?: TooltipItem[];
+    label?: string;
+  }
+
+  const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-slate-800 border border-cyan-400/30 rounded-lg p-3 shadow-lg">
           <p className="text-cyan-400 font-medium">{label}</p>
-          {payload.map((item: any, index: number) => (
+          {payload.map((item, index) => (
             <p key={index} className="text-slate-300">
               {item.name}: <span className="font-semibold" style={{ color: item.color }}>{item.value}%</span>
             </p>

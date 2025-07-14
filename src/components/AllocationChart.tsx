@@ -35,7 +35,12 @@ export function AllocationChart({ data }: AllocationChartProps) {
       color: COLORS[key as keyof typeof COLORS]
     }));
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  interface CustomTooltipProps {
+    active?: boolean;
+    payload?: { name: string; value: number; color: string }[];
+  }
+
+  const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-background/95 border rounded-lg p-2 shadow-lg">
@@ -65,10 +70,12 @@ export function AllocationChart({ data }: AllocationChartProps) {
             ))}
           </Pie>
           <Tooltip content={<CustomTooltip />} />
-          <Legend 
+          <Legend
             wrapperStyle={{ fontSize: '12px' }}
             formatter={(value, entry) => (
-              <span style={{ color: (entry as any).color }}>{value}</span>
+              <span style={{ color: (entry as { color?: string }).color }}>
+                {value}
+              </span>
             )}
           />
         </PieChart>

@@ -32,8 +32,16 @@ export default function TableauDeBord() {
     if (uid) {
       loadUserData(uid);
       // Analytics tracking
-      if (typeof window !== 'undefined' && (window as any).lovable?.analytics) {
-        (window as any).lovable.analytics.track("dashboard_visit", { uid });
+      if (typeof window !== "undefined") {
+        interface LovableAnalytics {
+          lovable?: {
+            analytics?: {
+              track: (event: string, data: Record<string, unknown>) => void;
+            };
+          };
+        }
+        const win = window as unknown as LovableAnalytics;
+        win.lovable?.analytics?.track("dashboard_visit", { uid });
       }
     }
   }, [uid]);

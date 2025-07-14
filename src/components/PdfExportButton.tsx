@@ -26,8 +26,12 @@ export function PdfExportButton({ userData, patrimonyData }: PdfExportButtonProp
     
     try {
       // Analytics tracking
-      if (typeof window !== 'undefined' && (window as any).lovable?.analytics) {
-        (window as any).lovable.analytics.track("pdf_export", { 
+      if (typeof window !== 'undefined') {
+        interface LovableWin {
+          lovable?: { analytics?: { track: (e: string, d: Record<string, unknown>) => void } };
+        }
+        const win = window as unknown as LovableWin;
+        win.lovable?.analytics?.track("pdf_export", {
           userId: userData.email,
           timestamp: new Date().toISOString()
         });

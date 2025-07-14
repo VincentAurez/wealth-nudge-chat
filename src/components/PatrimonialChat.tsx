@@ -88,7 +88,7 @@ interface Message {
   id: string;
   type: 'user' | 'assistant';
   content: string;
-  data?: any;
+  data?: Record<string, unknown>;
   showStats?: boolean;
   insights?: {
     insight?: { icon: string; message: string };
@@ -276,7 +276,10 @@ export function PatrimonialChat() {
     }
   }, [messages]);
 
-  const generateInsights = (field: keyof UserData, value: any) => {
+  const generateInsights = (
+    field: keyof UserData,
+    value: number | string | string[] | Record<string, number>
+  ) => {
     const dept = userData.zipcode ? userData.zipcode.substring(0, 2) : '75';
     const age = userData.age || 40;
     const ageGroup = age < 30 ? '<30' : age < 40 ? '30-40' : age < 50 ? '40-50' : age < 60 ? '50-60' : '60+';
@@ -291,34 +294,40 @@ export function PatrimonialChat() {
     const franceRank = Math.floor(Math.random() * 50) + 40; // 40-90%
     
     let baseMessage = "";
-    
+
     switch (field) {
-      case 'age':
-        if (value < 40) {
-          baseMessage = `À ${value} ans, vous anticipez plus tôt que la moyenne !`;
-        } else if (value >= 40 && value < 55) {
-          baseMessage = `À ${value} ans, vous rejoignez la nouvelle génération de clients patrimoniaux.`;
+      case 'age': {
+        const ageVal = Number(value);
+        if (ageVal < 40) {
+          baseMessage = `À ${ageVal} ans, vous anticipez plus tôt que la moyenne !`;
+        } else if (ageVal >= 40 && ageVal < 55) {
+          baseMessage = `À ${ageVal} ans, vous rejoignez la nouvelle génération de clients patrimoniaux.`;
         } else {
-          baseMessage = `À ${value} ans, vous êtes dans la tranche d'âge typique du conseil patrimonial.`;
+          baseMessage = `À ${ageVal} ans, vous êtes dans la tranche d'âge typique du conseil patrimonial.`;
         }
         break;
+      }
       
       case 'zipcode':
         baseMessage = `Votre code postal ${value} me permet de vous comparer aux habitants de votre département.`;
         break;
       
-      case 'monthlyIncome':
-        if (value <= 2183) {
-          baseMessage = `Avec ${value}€ nets mensuels, vous êtes proche de la médiane française.`;
-        } else if (value <= 4302) {
-          baseMessage = `Avec ${value}€ nets mensuels, vous avez un bon potentiel d'épargne.`;
+      case 'monthlyIncome': {
+        const income = Number(value);
+        if (income <= 2183) {
+          baseMessage = `Avec ${income}€ nets mensuels, vous êtes proche de la médiane française.`;
+        } else if (income <= 4302) {
+          baseMessage = `Avec ${income}€ nets mensuels, vous avez un bon potentiel d'épargne.`;
         } else {
-          baseMessage = `Avec ${value}€ nets mensuels, vous avez un potentiel patrimonial important.`;
+          baseMessage = `Avec ${income}€ nets mensuels, vous avez un potentiel patrimonial important.`;
         }
         break;
+      }
       
-      case 'currentSavings':
-        const savingsRate = userData.monthlyIncome ? (value / userData.monthlyIncome) * 100 : 0;
+      case 'currentSavings': {
+        const savingsRate = userData.monthlyIncome
+          ? (value as number) / userData.monthlyIncome * 100
+          : 0;
         if (savingsRate < 15) {
           baseMessage = `Vous épargnez ${savingsRate.toFixed(1)}% de vos revenus, il y a de la marge !`;
         } else if (savingsRate >= 15 && savingsRate < 25) {
@@ -327,6 +336,7 @@ export function PatrimonialChat() {
           baseMessage = `Excellent ! Vous épargnez ${savingsRate.toFixed(1)}% de vos revenus.`;
         }
         break;
+      }
       
       default:
         baseMessage = "Merci pour cette information !";
@@ -470,7 +480,7 @@ Découvrons maintenant votre profil de risque !`;
     if (currentStep >= steps.length) return;
 
     const currentStepData = steps[currentStep];
-    let processedValue: any = inputValue;
+      let processedValue: string | number | string[] | Record<string, number> = inputValue;
 
     // Process the input based on step type
     if (currentStepData.type === 'number') {
@@ -553,22 +563,29 @@ Découvrons maintenant votre profil de risque !`;
     // Generate insights and fun fact
     const insightData = generateInsights(currentStepData.field, processedValue);
     
-const generateContextualFunFact = (step: number, fieldName: keyof UserData, value: any, userData: UserData): {text: string, source: string} => {
+const generateContextualFunFact = (
+  step: number,
+  fieldName: keyof UserData,
+  value: number | string | string[] | { [key: string]: number },
+  userData: UserData
+): { text: string; source: string } => {
   switch (fieldName) {
-    case 'age':
-      if (value < 25) {
+    case 'age': {
+      const ageVal = value as number;
+      if (ageVal < 25) {
         return { text: "🚀 Les moins de 25 ans qui commencent à épargner maintenant peuvent devenir millionnaires avant 50 ans grâce aux intérêts composés !", source: "Simulation mathématique" };
-      } else if (value < 35) {
+      } else if (ageVal < 35) {
         return { text: "💪 À votre âge, chaque euro épargné aujourd'hui vaudra 4€ à la retraite grâce au temps.", source: "Calcul actuariel standard" };
-      } else if (value < 45) {
+      } else if (ageVal < 45) {
         return { text: "⚡ La quarantaine est l'âge pivot : c'est maintenant que les écarts patrimoniaux se creusent vraiment.", source: "Insee Revenus et patrimoine" };
-      } else if (value < 55) {
+      } else if (ageVal < 55) {
         return { text: "🎯 À 50 ans, les Français ont en moyenne 158 000€ de patrimoine net. Où en êtes-vous ?", source: "Insee 2023" };
       } else {
         return { text: "⏳ Après 55 ans, 73% des Français accélèrent leur épargne pour sécuriser leur retraite.", source: "Banque de France 2024" };
       }
+    }
 
-    case 'goalsPriority':
+    case 'goalsPriority': {
       const topGoal = Array.isArray(value) ? value[0] : '';
       if (topGoal.includes('retraite')) {
         return { text: "🏖️ Un Français sur deux craint de manquer d'argent à la retraite. Anticiper, c'est déjà être dans le bon wagon !", source: "Baromètre retraites 2024" };
@@ -579,9 +596,10 @@ const generateContextualFunFact = (step: number, fieldName: keyof UserData, valu
       } else {
         return { text: "🎯 Avoir des objectifs clairs multiplie par 3 la probabilité d'atteindre ses objectifs financiers.", source: "Étude comportementale Harvard 2022" };
       }
+    }
 
-    case 'zipcode':
-      const dept = value.substring(0, 2);
+    case 'zipcode': {
+      const dept = (value as string).substring(0, 2);
       if (['75', '92', '93', '94'].includes(dept)) {
         return { text: "🏙️ En Île-de-France, 68% du budget des ménages passe dans le logement vs 25% en province. Épargner y est un exploit !", source: "Insee régional 2024" };
       } else if (['06', '13', '83', '84'].includes(dept)) {
@@ -589,49 +607,60 @@ const generateContextualFunFact = (step: number, fieldName: keyof UserData, valu
       } else {
         return { text: "🗺️ Votre département influence votre épargne : coût de la vie, fiscalité locale, mentalité... tout compte !", source: "Observatoire territoires 2024" };
       }
+    }
 
-    case 'householdStructure':
-      if (value === 'Personne seule') {
+    case 'householdStructure': {
+      const hs = value as string;
+      if (hs === 'Personne seule') {
         return { text: "🙋 Les célibataires épargnent moins mais investissent plus agressivement : 23% en actions vs 14% pour les couples.", source: "AMF Épargne 2024" };
-      } else if (value === 'Couple sans enfant') {
+      } else if (hs === 'Couple sans enfant') {
         return { text: "👫 Les couples sans enfant : champions de l'épargne avec 22% de taux moyen, et 85% de taux de propriété !", source: "Insee Ménages 2023" };
-      } else if (value?.includes('enfant')) {
+      } else if (hs.includes('enfant')) {
         return { text: "👨‍👩‍👧‍👦 Avoir des enfants fait chuter l'épargne de 8 points... mais dope la motivation patrimoniale de 200% !", source: "Crédoc Famille 2024" };
       } else {
         return { text: "👤 Les familles monoparentales privilégient l'épargne de précaution : 74% ont un livret A bien garni.", source: "Banque de France 2023" };
       }
+    }
 
-    case 'csp':
-      if (value?.includes('Cadre')) {
+    case 'csp': {
+      const cspVal = value as string;
+      if (cspVal.includes('Cadre')) {
         return { text: "💼 Les cadres investissent 3x plus en actions que la moyenne, mais négligent souvent l'assurance-vie.", source: "AMF Comportements 2024" };
-      } else if (value?.includes('intermédiaire')) {
+      } else if (cspVal.includes('intermédiaire')) {
         return { text: "⚖️ Les professions intermédiaires : le sweet spot patrimonial ! Bon revenu + prudence = constitution solide.", source: "Insee Patrimoine 2023" };
-      } else if (value?.includes('Artisan') || value?.includes('Commerçant')) {
+      } else if (cspVal.includes('Artisan') || cspVal.includes('Commerçant')) {
         return { text: "🔨 Les indépendants détiennent 40% du patrimoine français total alors qu'ils ne sont que 11% de la population !", source: "DGFiP Patrimoine 2024" };
       } else {
         return { text: "💪 Quel que soit votre métier, c'est la régularité qui compte : 50€/mois pendant 20 ans = 12 000€ + intérêts !", source: "Mathématiques financières" };
       }
+    }
 
-    case 'employmentStatus':
-      if (value === 'TNS') {
+    case 'employmentStatus': {
+      const statusVal = value as string;
+      if (statusVal === 'TNS') {
         return { text: "🚀 Les TNS représentent 28% des millionnaires français ! Liberté rime avec responsabilité patrimoniale.", source: "Observatoire Patrimoine 2024" };
       } else {
         return { text: "🏢 Les salariés ont un avantage caché : l'épargne salariale moyenne rapporte 1 200€/an de plus que prévu !", source: "AFG Épargne salariale 2024" };
       }
+    }
 
-    case 'monthlyIncome':
-      if (value <= 2000) {
+    case 'monthlyIncome': {
+      const income = value as number;
+      if (income <= 2000) {
         return { text: "💎 Avec un petit budget, chaque euro compte double ! Les 'petits' épargnants réguliers battent souvent les 'gros' irréguliers.", source: "Étude comportementale Crédit Agricole" };
-      } else if (value <= 3500) {
+      } else if (income <= 3500) {
         return { text: "🎯 Votre tranche de revenu est optimale pour l'immobilier locatif : capacité d'emprunt + défiscalisation = combo gagnant.", source: "CGPI Immobilier 2024" };
-      } else if (value <= 5000) {
+      } else if (income <= 5000) {
         return { text: "⭐ Top 20% des revenus ! Vous accédez aux placements privés, FCPR, SCPI de rendement... L'artillerie lourde !", source: "AMF Investisseurs qualifiés" };
       } else {
         return { text: "👑 Top 10% français ! Votre enjeu : optimisation fiscale. 1€ économisé d'impôt = 1€ de plus à investir.", source: "DGFiP Revenus déclaratifs" };
       }
+    }
 
-    case 'currentSavings':
-      const savingsRate = userData.monthlyIncome ? (value / userData.monthlyIncome) * 100 : 0;
+    case 'currentSavings': {
+      const savingsRate = userData.monthlyIncome
+        ? ((value as number) / userData.monthlyIncome) * 100
+        : 0;
       if (savingsRate < 10) {
         return { text: "🌱 Même 20€/mois c'est énorme ! Warren Buffett a commencé avec 114$ à 11 ans. Le secret : commencer.", source: "Biographie W. Buffett" };
       } else if (savingsRate < 20) {
@@ -639,6 +668,7 @@ const generateContextualFunFact = (step: number, fieldName: keyof UserData, valu
       } else {
         return { text: "🏆 Exceptionnel ! Votre taux d'épargne rivalise avec les Singapouriens (23%). Vous êtes dans l'élite mondiale !", source: "Comparaison internationale OCDE" };
       }
+    }
 
     case 'riskProfile':
       if (value === 'PRUDENT') {
@@ -649,16 +679,18 @@ const generateContextualFunFact = (step: number, fieldName: keyof UserData, valu
         return { text: "🚀 Profil fonceur ! Les investisseurs 100% actions ont multiplié leur capital par 17 en 30 ans... après avoir survécu aux krachs !", source: "CAC 40 depuis 1990" };
       }
 
-    case 'assetSplit':
-      if (value.livrets > 50) {
+    case 'assetSplit': {
+      const split = value as { livrets: number; actions: number; immo: number };
+      if (split.livrets > 50) {
         return { text: "🏦 Plus de 50% en livrets ? Vous êtes hyper-sécurisé mais l'inflation grignote 2%/an. Diversifier peut aider !", source: "Banque de France inflation" };
-      } else if (value.actions > 30) {
+      } else if (split.actions > 30) {
         return { text: "📈 Belle allocation actions ! Vous faites partie des 16% de Français qui osent la Bourse. Les statistiques jouent pour vous.", source: "AMF Français et Bourse 2024" };
-      } else if (value.immo > 25) {
+      } else if (split.immo > 25) {
         return { text: "🏢 L'immobilier, valeur refuge des Français ! 78% du patrimoine des ménages. Vous suivez la tradition nationale.", source: "Insee Patrimoine immobilier" };
       } else {
         return { text: "🎯 Diversification équilibrée ! C'est exactement ce que préconisent 89% des conseillers patrimoniaux.", source: "Sondage CGPI 2024" };
       }
+    }
 
     default:
       return FUN_FACTS[step % FUN_FACTS.length];
@@ -669,10 +701,14 @@ const generateContextualFunFact = (step: number, fieldName: keyof UserData, valu
     setFunFact(selectedFact);
     
     // Analytics tracking
-    if (typeof window !== 'undefined' && (window as any).lovable?.analytics) {
-      (window as any).lovable.analytics.track("fun_fact_shown", { 
-        step: currentStep, 
-        funFact: selectedFact.text 
+    if (typeof window !== 'undefined') {
+      interface LovableWin {
+        lovable?: { analytics?: { track: (e: string, d: Record<string, unknown>) => void } };
+      }
+      const win = window as unknown as LovableWin;
+      win.lovable?.analytics?.track("fun_fact_shown", {
+        step: currentStep,
+        funFact: selectedFact.text
       });
     }
     
