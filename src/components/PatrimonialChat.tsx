@@ -12,8 +12,11 @@ import { GamificationBadges } from "@/components/GamificationBadges";
 import { FunFactCard } from "@/components/FunFactCard";
 import { DecileTooltip } from "@/components/DecileTooltip";
 import { StickyCTA } from "@/components/StickyCTA";
+import { SortableGoals } from "@/components/SortableGoals";
+import { ValueAddedCard } from "@/components/ValueAddedCard";
 import { Send, TrendingUp, Users, Award, Target, Sparkles, Home, MapPin, Flag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { pickObjectivesByAge, calculateTargetSavingRate } from "@/utils/objectives";
 
 const FUN_FACTS = [
   "💡 1 Français sur 3 vit seul – mais seulement 47 % des personnes seules sont propriétaires.",
@@ -26,6 +29,8 @@ const FUN_FACTS = [
 
 export interface UserData {
   age?: number;
+  goalsPriority?: string[];
+  savingGap?: number;
   zipcode?: string;
   householdStructure?: string;
   csp?: string;
@@ -63,7 +68,7 @@ interface Message {
 interface ChatStep {
   id: string;
   question: string;
-  type: 'number' | 'select' | 'text' | 'sliders';
+  type: 'number' | 'select' | 'text' | 'sliders' | 'objectives';
   options?: string[];
   sliders?: { name: string; label: string; min: number; max: number; step: number }[];
   field: keyof UserData;
@@ -76,6 +81,13 @@ const chatSteps: ChatStep[] = [
     question: "Quel est votre âge ? Cette information m'aidera à vous comparer avec vos pairs.",
     type: 'number',
     field: 'age',
+    completed: false
+  },
+  {
+    id: 'objectives',
+    question: "📌 Priorisez vos objectifs patrimoniaux en les classant par ordre d'importance (glissez-déposez):",
+    type: 'objectives',
+    field: 'goalsPriority',
     completed: false
   },
   {
@@ -177,8 +189,18 @@ export function PatrimonialChat() {
   const [askingPhone, setAskingPhone] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [funFact, setFunFact] = useState<string | null>(null);
+  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
+  const [showValueAdded, setShowValueAdded] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Initialize goals when age is set
+  useEffect(() => {
+    if (userData.age && selectedGoals.length === 0) {
+      const suggestedGoals = pickObjectivesByAge(userData.age);
+      setSelectedGoals(suggestedGoals);
+    }
+  }, [userData.age, selectedGoals.length]);
 
   const progress = (steps.filter(s => s.completed).length / steps.length) * 100;
 
@@ -369,6 +391,9 @@ export function PatrimonialChat() {
     } else if (currentStepData.type === 'sliders') {
       // Handle asset split sliders
       processedValue = assetSliders;
+    } else if (currentStepData.type === 'objectives') {
+      // Handle objectives - use selected goals
+      processedValue = selectedGoals;
     }
 
     // Add user message
@@ -377,11 +402,21 @@ export function PatrimonialChat() {
       type: 'user',
       content: currentStepData.type === 'sliders' 
         ? `Répartition : Livrets ${assetSliders.livrets}%, Assurance-vie ${assetSliders.assuranceVie}%, Actions ${assetSliders.actions}%, Immobilier ${assetSliders.immo}%, Autres ${assetSliders.autres}%`
+        : currentStepData.type === 'objectives'
+        ? `Mes priorités : 1) ${selectedGoals[0] || 'Non défini'} 2) ${selectedGoals[1] || 'Non défini'} 3) ${selectedGoals[2] || 'Non défini'}`
         : inputValue
     };
 
     // Update user data
     const newUserData = { ...userData, [currentStepData.field]: processedValue };
+    
+    // Calculate saving gap after income and savings steps
+    if (currentStepData.field === 'currentSavings' && newUserData.monthlyIncome && newUserData.age) {
+      const currentSavingsRate = (newUserData.currentSavings / newUserData.monthlyIncome) * 100;
+      const targetRate = calculateTargetSavingRate(newUserData.age);
+      newUserData.savingGap = Math.max(0, targetRate - currentSavingsRate);
+    }
+    
     setUserData(newUserData);
 
     // Mark step as completed
@@ -407,8 +442,25 @@ export function PatrimonialChat() {
 
     setMessages(prev => [...prev, userMessage, assistantMessage]);
 
+    // Special handling for objectives step - show ValueAddedCard
+    if (currentStepData.field === 'goalsPriority') {
+      setTimeout(() => {
+        setShowValueAdded(true);
+      }, 2000);
+    } 
+    // Special savings gap notification
+    else if (currentStepData.field === 'currentSavings' && newUserData.savingGap && newUserData.savingGap > 0) {
+      setTimeout(() => {
+        const gapMessage: Message = {
+          id: (Date.now() + 3).toString(),
+          type: 'assistant',
+          content: `🪙 Vous pourriez épargner ~${newUserData.savingGap?.toFixed(1)}% de plus sans sortir de la moyenne de votre profil — voyons comment !`
+        };
+        setMessages(prev => [...prev, gapMessage]);
+      }, 2500);
+    }
     // Special handling for email step - ask for phone next
-    if (currentStepData.field === 'email') {
+    else if (currentStepData.field === 'email') {
       setTimeout(() => {
         const phoneMessage: Message = {
           id: (Date.now() + 2).toString(),
@@ -432,6 +484,60 @@ export function PatrimonialChat() {
     }
 
     setInputValue("");
+  };
+
+  const handleObjectivesSubmit = () => {
+    if (selectedGoals.length === 0) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner au moins un objectif",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Add user message showing selected goals
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: `Mes priorités : 1) ${selectedGoals[0] || 'Non défini'} 2) ${selectedGoals[1] || 'Non défini'} 3) ${selectedGoals[2] || 'Non défini'}`
+    };
+
+    // Update user data
+    const newUserData = { ...userData, goalsPriority: selectedGoals };
+    setUserData(newUserData);
+
+    // Mark step as completed
+    const newSteps = [...steps];
+    newSteps[currentStep].completed = true;
+    setSteps(newSteps);
+
+    const assistantMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      type: 'assistant',
+      content: "Parfait ! Vos objectifs sont bien hiérarchisés. Un conseiller pourra vous aider concrètement sur vos priorités."
+    };
+
+    setMessages(prev => [...prev, userMessage, assistantMessage]);
+
+    // Show ValueAddedCard after 2 seconds
+    setTimeout(() => {
+      setShowValueAdded(true);
+    }, 2000);
+
+    // Move to next step after 4 seconds
+    if (currentStep < steps.length - 1) {
+      setTimeout(() => {
+        const nextStepMessage: Message = {
+          id: (Date.now() + 2).toString(),
+          type: 'assistant',
+          content: steps[currentStep + 1].question
+        };
+        setMessages(prev => [...prev, nextStepMessage]);
+        setCurrentStep(currentStep + 1);
+        setShowValueAdded(false);
+      }, 4000);
+    }
   };
 
   const renderQuickOptions = () => {
@@ -570,6 +676,28 @@ export function PatrimonialChat() {
           {/* Quick options */}
           {renderQuickOptions()}
           
+          {/* Objectives Component */}
+          {currentStep < steps.length && steps[currentStep].type === 'objectives' && (
+            <div className="space-y-4 mb-4">
+              <SortableGoals 
+                items={selectedGoals}
+                onChange={setSelectedGoals}
+              />
+              <Button 
+                onClick={handleObjectivesSubmit}
+                className="w-full"
+                variant="gradient"
+              >
+                Valider mes objectifs
+              </Button>
+              
+              {/* ValueAddedCard */}
+              {showValueAdded && (
+                <ValueAddedCard topGoals={selectedGoals} />
+              )}
+            </div>
+          )}
+          
           {/* Asset Sliders */}
           {currentStep < steps.length && steps[currentStep].type === 'sliders' && (
             <div className="space-y-4 mb-4">
@@ -618,7 +746,7 @@ export function PatrimonialChat() {
           )}
 
           {/* Input */}
-          {(currentStep < steps.length && !askingPhone) || askingPhone ? (
+          {(currentStep < steps.length && steps[currentStep].type !== 'objectives' && !askingPhone) || askingPhone ? (
             <div className="flex gap-2">
               <Input
                 value={inputValue}
