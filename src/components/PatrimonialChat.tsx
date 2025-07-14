@@ -325,6 +325,65 @@ export function PatrimonialChat() {
     };
   };
 
+  const handleSavingsAction = (action: string) => {
+    let content = "";
+    let nextPrompt = "";
+
+    switch (action) {
+      case 'tips':
+        content = `💰 Voici des astuces personnalisées pour votre profil :
+
+• **Automatisez** : Virement automatique le jour de paie
+• **Optimisez** : Négociez vos assurances (-15% possible)
+• **Diversifiez** : ${userData.assetSplit?.livrets && userData.assetSplit.livrets > 50 ? "Réduisez vos livrets au profit d'investissements" : "Maintenez une épargne équilibrée"}
+
+Continuons le questionnaire pour affiner vos opportunités !`;
+        nextPrompt = steps[currentStep + 1]?.question || "";
+        break;
+      
+      case 'compare':
+        content = `📊 Comparaison avec vos pairs :
+
+• **Médiane française** : 15% d'épargne
+• **Votre profil** : ${userData.monthlyIncome && userData.currentSavings ? ((userData.currentSavings / userData.monthlyIncome) * 100).toFixed(1) : 'X'}%
+• **Potentiel optimal** : ${userData.monthlyIncome && userData.currentSavings && userData.savingGap ? (((userData.currentSavings / userData.monthlyIncome) * 100) + userData.savingGap).toFixed(1) : 'X'}%
+
+Découvrons maintenant votre profil de risque !`;
+        nextPrompt = steps[currentStep + 1]?.question || "";
+        break;
+      
+      case 'continue':
+        content = "Parfait ! Continuons votre analyse patrimoniale pour identifier toutes vos opportunités.";
+        nextPrompt = steps[currentStep + 1]?.question || "";
+        break;
+      
+      default:
+        content = "Continuons ensemble votre parcours patrimonial !";
+        nextPrompt = steps[currentStep + 1]?.question || "";
+    }
+
+    const responseMessage: Message = {
+      id: Date.now().toString(),
+      type: 'assistant',
+      content: content
+    };
+
+    setMessages(prev => [...prev, responseMessage]);
+
+    // Continue to next step if available
+    if (currentStep < steps.length - 1 && nextPrompt) {
+      setTimeout(() => {
+        const nextStepMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: nextPrompt
+        };
+        setMessages(prev => [...prev, nextStepMessage]);
+        setCurrentStep(currentStep + 1);
+      }, 2000);
+    }
+  };
+
   const handleSendMessage = () => {
     if (!inputValue.trim()) return;
 
@@ -601,13 +660,19 @@ const generateContextualFunFact = (step: number, fieldName: keyof UserData, valu
         setShowValueAdded(true);
       }, 2000);
     } 
-    // Special savings gap notification
+    // Special savings gap notification with interactive options
     else if (currentStepData.field === 'currentSavings' && newUserData.savingGap && newUserData.savingGap > 0) {
       setTimeout(() => {
         const gapMessage: Message = {
           id: (Date.now() + 3).toString(),
           type: 'assistant',
-          content: `🪙 Vous pourriez épargner ~${newUserData.savingGap?.toFixed(1)}% de plus sans sortir de la moyenne de votre profil — voyons comment !`
+          content: `🪙 Vous pourriez épargner ~${newUserData.savingGap?.toFixed(1)}% de plus sans sortir de la moyenne de votre profil !
+
+💡 Que souhaitez-vous découvrir ?`,
+          data: { 
+            showSavingsActions: true,
+            savingGap: newUserData.savingGap 
+          }
         };
         setMessages(prev => [...prev, gapMessage]);
       }, 2500);
@@ -636,6 +701,50 @@ const generateContextualFunFact = (step: number, fieldName: keyof UserData, valu
       }, 1500);
     }
 
+    setInputValue("");
+  };
+
+  const handleFreeChat = () => {
+    if (!inputValue.trim()) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: inputValue
+    };
+
+    // Generate contextual response based on user data
+    let responseContent = "";
+    const query = inputValue.toLowerCase();
+    
+    if (query.includes('épargne') || query.includes('epargne')) {
+      responseContent = `📊 Avec ${userData.currentSavings}€/mois d'épargne sur ${userData.monthlyIncome}€ de revenus, vous épargnez ${userData.monthlyIncome ? ((userData.currentSavings || 0) / userData.monthlyIncome * 100).toFixed(1) : 'X'}%.
+
+La moyenne française est à 15%. ${userData.savingGap ? `Vous pourriez épargner ${userData.savingGap.toFixed(1)}% de plus pour optimiser votre potentiel.` : 'Vous êtes dans une bonne dynamique !'}`;
+    } else if (query.includes('retraite')) {
+      responseContent = `🏖️ Pour votre retraite à ${userData.age ? userData.age + 25 : 65} ans, avec votre épargne actuelle de ${userData.currentSavings || 0}€/mois, vous pourriez accumuler environ ${((userData.currentSavings || 0) * 12 * 25 * 1.04).toFixed(0)}€ (calcul simple à 4%/an).
+
+Souhaitez-vous que je vous donne des conseils pour optimiser cette projection ?`;
+    } else if (query.includes('placement') || query.includes('investir')) {
+      const riskAdvice = userData.riskProfile === 'PRUDENT' ? 'Privilégiez les fonds euros et livrets' : 
+                        userData.riskProfile === 'EQUILIBRE' ? 'Un mix 60% sécurisé / 40% dynamique semble adapté' :
+                        'Vous pouvez explorer les actions et SCPI pour plus de rendement';
+      responseContent = `💰 Selon votre profil ${userData.riskProfile?.toLowerCase()}, ${riskAdvice}.
+
+Avec votre répartition actuelle (${userData.assetSplit?.livrets || 0}% livrets, ${userData.assetSplit?.actions || 0}% actions), vous pourriez ${userData.assetSplit?.livrets && userData.assetSplit.livrets > 50 ? 'diversifier davantage' : 'maintenir cette équilibre'}.`;
+    } else {
+      responseContent = `🤔 C'est une excellente question ! Avec votre profil (${userData.age} ans, ${userData.monthlyIncome}€/mois, ${userData.householdStructure?.toLowerCase()}), je peux vous donner des conseils personnalisés.
+
+Précisez votre question sur l'épargne, les placements, la retraite ou la fiscalité pour une réponse plus ciblée !`;
+    }
+
+    const assistantMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      type: 'assistant',
+      content: responseContent
+    };
+
+    setMessages(prev => [...prev, userMessage, assistantMessage]);
     setInputValue("");
   };
 
@@ -878,6 +987,57 @@ const generateContextualFunFact = (step: number, fieldName: keyof UserData, valu
                           </div>
                         </div>
                       )}
+                      
+                      {/* Interactive savings actions */}
+                      {message.data?.showSavingsActions && (
+                        <motion.div 
+                          className="mt-4 space-y-2"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.5 }}
+                        >
+                          <div className="grid grid-cols-1 gap-2">
+                            <motion.button
+                              onClick={() => handleSavingsAction('tips')}
+                              className="flex items-center gap-2 p-3 bg-gradient-to-r from-blue-500/10 to-blue-600/10 hover:from-blue-500/20 hover:to-blue-600/20 rounded-lg text-left transition-all duration-200 border border-blue-200/20"
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <span className="text-lg">💡</span>
+                              <div>
+                                <div className="font-medium text-sm">Des astuces pour épargner plus</div>
+                                <div className="text-xs opacity-70">Conseils personnalisés selon votre profil</div>
+                              </div>
+                            </motion.button>
+                            
+                            <motion.button
+                              onClick={() => handleSavingsAction('compare')}
+                              className="flex items-center gap-2 p-3 bg-gradient-to-r from-green-500/10 to-green-600/10 hover:from-green-500/20 hover:to-green-600/20 rounded-lg text-left transition-all duration-200 border border-green-200/20"
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <span className="text-lg">📊</span>
+                              <div>
+                                <div className="font-medium text-sm">Comparer avec mes pairs</div>
+                                <div className="text-xs opacity-70">Votre position vs autres Français</div>
+                              </div>
+                            </motion.button>
+                            
+                            <motion.button
+                              onClick={() => handleSavingsAction('continue')}
+                              className="flex items-center gap-2 p-3 bg-gradient-to-r from-primary/10 to-accent/10 hover:from-primary/20 hover:to-accent/20 rounded-lg text-left transition-all duration-200 border border-primary/20"
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <span className="text-lg">🚀</span>
+                              <div>
+                                <div className="font-medium text-sm">Continuer mon analyse</div>
+                                <div className="text-xs opacity-70">Découvrir toutes mes opportunités</div>
+                              </div>
+                            </motion.button>
+                          </div>
+                        </motion.div>
+                      )}
                     </motion.div>
                   </motion.div>
                 ))}
@@ -974,7 +1134,7 @@ const generateContextualFunFact = (step: number, fieldName: keyof UserData, valu
           )}
 
           {/* Input */}
-          {(currentStep < steps.length && steps[currentStep].type !== 'objectives' && !askingPhone) || askingPhone ? (
+          {(currentStep < steps.length && steps[currentStep].type !== 'objectives' && steps[currentStep].type !== 'sliders' && !askingPhone) || askingPhone ? (
             <motion.div 
               className="flex gap-2"
               initial={{ opacity: 0, y: 10 }}
@@ -1015,6 +1175,32 @@ const generateContextualFunFact = (step: number, fieldName: keyof UserData, valu
               </motion.div>
             </motion.div>
           ) : null}
+          
+          {/* Free chat option for completed users */}
+          {currentStep >= steps.length && !askingPhone && (
+            <motion.div 
+              className="space-y-3"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="text-center text-sm text-muted-foreground">
+                💬 Posez-moi une question sur votre situation patrimoniale
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  placeholder="Votre question..."
+                  onKeyPress={(e) => e.key === 'Enter' && handleFreeChat()}
+                  className="flex-1"
+                />
+                <Button onClick={handleFreeChat} variant="outline">
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            </motion.div>
+          )}
           
           {currentStep >= steps.length && !askingPhone && (
             <div className="text-center py-8">
