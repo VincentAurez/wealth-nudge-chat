@@ -514,7 +514,29 @@ export function PatrimonialChat() {
                     }`}
                   >
                     <p className="text-sm leading-relaxed">{message.content}</p>
-                    {message.showStats && message.data?.field && (
+                    {message.insights && (
+                      <div className="mt-4 space-y-3">
+                        {Object.entries(message.insights).map(([key, insight]) => (
+                          <div key={key} className="bg-background/10 rounded-xl p-3 max-w-[70%]" role="status">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-lg">{insight.icon}</span>
+                              <span className="text-xs font-medium opacity-80">{insight.label}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 bg-background/20 rounded-full h-2">
+                                <div 
+                                  className="bg-gradient-to-r from-primary to-accent h-2 rounded-full transition-all duration-500"
+                                  style={{ width: `${insight.value}%` }}
+                                />
+                              </div>
+                              <span className="text-sm font-bold">{insight.value}%</span>
+                            </div>
+                            <p className="text-xs opacity-75 mt-1">{insight.message}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {message.showStats && message.data?.field && !message.insights && (
                       <div className="mt-3 p-3 bg-background/10 rounded-lg">
                         <div className="flex items-center gap-2 text-xs font-medium opacity-80 mb-1">
                           <Target className="w-3 h-3" />
