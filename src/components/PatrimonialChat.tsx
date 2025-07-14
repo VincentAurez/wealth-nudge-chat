@@ -1178,25 +1178,24 @@ Précisez votre question sur l'épargne, les placements, la retraite ou la fisca
           
           {/* Free chat option for completed users */}
           {currentStep >= steps.length && !askingPhone && (
-            <motion.div 
-              className="space-y-3"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <div className="text-center text-sm text-muted-foreground">
-                💬 Posez-moi une question sur votre situation patrimoniale
+            <motion.div className="text-center py-6">
+              <div className="mb-4">
+                <div className="inline-flex items-center gap-2 px-6 py-3 bg-success text-success-foreground rounded-lg font-medium">
+                  <Award className="w-5 h-5" />
+                  Profil patrimonial complété !
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Input
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Votre question..."
-                  onKeyPress={(e) => e.key === 'Enter' && handleFreeChat()}
-                  className="flex-1"
-                />
-                <Button onClick={handleFreeChat} variant="outline">
-                  <Send className="w-4 h-4" />
+              <div className="space-y-3">
+                <p className="text-muted-foreground">
+                  Accédez maintenant à votre tableau de bord personnalisé
+                </p>
+                <Button 
+                  onClick={() => window.open(`/tableau-de-bord?uid=${userData.email}`, '_blank')}
+                  variant="gradient"
+                  size="lg"
+                  className="bg-gradient-to-r from-primary to-accent"
+                >
+                  Voir mon tableau de bord
                 </Button>
               </div>
             </motion.div>

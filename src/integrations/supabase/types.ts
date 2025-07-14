@@ -14,7 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      user_patrimony: {
+        Row: {
+          assets_detail: Json | null
+          cashflow: Json | null
+          created_at: string
+          debts: Json | null
+          horizon: number | null
+          id: string
+          max_loss: number | null
+          tolerance: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assets_detail?: Json | null
+          cashflow?: Json | null
+          created_at?: string
+          debts?: Json | null
+          horizon?: number | null
+          id?: string
+          max_loss?: number | null
+          tolerance?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assets_detail?: Json | null
+          cashflow?: Json | null
+          created_at?: string
+          debts?: Json | null
+          horizon?: number | null
+          id?: string
+          max_loss?: number | null
+          tolerance?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
