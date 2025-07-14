@@ -678,10 +678,8 @@ const generateContextualFunFact = (step: number, fieldName: keyof UserData, valu
     const assistantMessage: Message = {
       id: (Date.now() + 1).toString(),
       type: 'assistant',
-      content: insightData.message,
-      showStats: true,
-      insights: insightData.insights,
-      data: { field: currentStepData.field, value: processedValue }
+      content: "Merci pour cette information !",
+      insights: { insight: { icon: "💡", message: "Information enregistrée" } }
     };
 
     setMessages(prev => [...prev, userMessage, assistantMessage]);
