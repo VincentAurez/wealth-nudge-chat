@@ -18,6 +18,7 @@ import { Send, TrendingUp, Users, Award, Target, Sparkles, Home, MapPin, Flag } 
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { pickObjectivesByAge, calculateTargetSavingRate } from "@/utils/objectives";
+import { AllocationChart } from "@/components/AllocationChart";
 
 const FUN_FACTS = [
   {
@@ -90,9 +91,7 @@ interface Message {
   data?: any;
   showStats?: boolean;
   insights?: {
-    local?: { icon: string; label: string; value: number; message: string };
-    peers?: { icon: string; label: string; value: number; message: string };
-    france?: { icon: string; label: string; value: number; message: string };
+    insight?: { icon: string; message: string };
   };
 }
 
@@ -216,6 +215,39 @@ export function PatrimonialChat() {
     immo: 20,
     autres: 10
   });
+
+  // Auto-adjust sliders to maintain 100% total
+  const adjustSliders = (changedSlider: string, newValue: number) => {
+    const currentTotal = Object.entries(assetSliders).reduce((sum, [key, val]) => {
+      return sum + (key === changedSlider ? newValue : val);
+    }, 0);
+    
+    if (currentTotal <= 100) {
+      setAssetSliders(prev => ({ ...prev, [changedSlider]: newValue }));
+    } else {
+      // If over 100%, proportionally reduce other sliders
+      const otherSliders = Object.entries(assetSliders).filter(([key]) => key !== changedSlider);
+      const remainingTotal = 100 - newValue;
+      const currentOthersTotal = otherSliders.reduce((sum, [, val]) => sum + val, 0);
+      
+      if (currentOthersTotal > 0) {
+        const newSliders = { ...assetSliders, [changedSlider]: newValue };
+        otherSliders.forEach(([key, val]) => {
+          newSliders[key as keyof typeof assetSliders] = Math.round((val / currentOthersTotal) * remainingTotal);
+        });
+        
+        // Ensure total is exactly 100%
+        const newTotal = Object.values(newSliders).reduce((sum, val) => sum + val, 0);
+        if (newTotal !== 100) {
+          const diff = 100 - newTotal;
+          const firstOtherKey = otherSliders[0][0] as keyof typeof assetSliders;
+          newSliders[firstOtherKey] += diff;
+        }
+        
+        setAssetSliders(newSliders);
+      }
+    }
+  };
   const [steps, setSteps] = useState(chatSteps);
   const [askingPhone, setAskingPhone] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
@@ -931,52 +963,47 @@ Précisez votre question sur l'épargne, les placements, la retraite ou la fisca
                       }`}
                     >
                       <p className="text-sm leading-relaxed">{message.content}</p>
-                      {message.insights && (
+                      {message.insights?.insight && (
                         <motion.div 
-                          className="mt-4 space-y-3"
+                          className="mt-4"
                           initial={{ opacity: 0, scale: 0.95 }}
                           animate={{ opacity: 1, scale: 1 }}
                           transition={{ delay: 0.3 }}
                         >
-                          {Object.entries(message.insights).map(([key, insight]) => (
-                            <motion.div 
-                              key={key} 
-                              className="bg-background/10 rounded-xl p-3 max-w-[70%]" 
-                              role="status"
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                            >
-                              <div className="flex items-center gap-2 mb-2">
-                                <motion.span 
-                                  className="text-lg"
-                                  animate={{ rotate: [0, 5, -5, 0] }}
-                                  transition={{ duration: 2, repeat: Infinity }}
-                                >
-                                  {insight.icon}
-                                </motion.span>
-                                <span className="text-xs font-medium opacity-80">{insight.label}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 bg-background/20 rounded-full h-2">
-                                  <motion.div 
-                                    className="bg-gradient-to-r from-primary to-accent h-2 rounded-full"
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${insight.value}%` }}
-                                    transition={{ duration: 1, delay: 0.5 }}
-                                  />
-                                </div>
-                                <motion.span 
-                                  className="text-sm font-bold"
-                                  initial={{ opacity: 0 }}
-                                  animate={{ opacity: 1 }}
-                                  transition={{ delay: 0.8 }}
-                                >
-                                  {insight.value}%
-                                </motion.span>
-                              </div>
-                              <p className="text-xs opacity-75 mt-1">{insight.message}</p>
-                            </motion.div>
-                          ))}
+                          <motion.div 
+                            className="bg-background/10 rounded-xl p-4" 
+                            role="status"
+                            whileHover={{ scale: 1.02 }}
+                          >
+                            <div className="flex items-start gap-3">
+                              <motion.span 
+                                className="text-2xl mt-1"
+                                animate={{ rotate: [0, 5, -5, 0] }}
+                                transition={{ duration: 3, repeat: Infinity }}
+                              >
+                                {message.insights.insight.icon}
+                              </motion.span>
+                              <p className="text-sm leading-relaxed flex-1">{message.insights.insight.message}</p>
+                            </div>
+                          </motion.div>
+                        </motion.div>
+                      )}
+                      
+                      {/* Show allocation chart for asset split */}
+                      {message.type === 'user' && message.content.includes('Répartition :') && (
+                        <motion.div 
+                          className="mt-4"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.5 }}
+                        >
+                          <div className="bg-background/10 rounded-xl p-4">
+                            <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                              <Target className="w-4 h-4" />
+                              Votre répartition actuelle
+                            </h4>
+                            <AllocationChart data={assetSliders} />
+                          </div>
                         </motion.div>
                       )}
                       {message.showStats && message.data?.field && !message.insights && (
@@ -1088,47 +1115,49 @@ Précisez votre question sur l'épargne, les placements, la retraite ou la fisca
           
           {/* Asset Sliders */}
           {currentStep < steps.length && steps[currentStep].type === 'sliders' && (
-            <div className="space-y-4 mb-4">
-              <div className="grid grid-cols-1 gap-4">
-                {steps[currentStep].sliders?.map((slider) => (
-                  <div key={slider.name} className="space-y-2">
-                    <div className="flex justify-between">
-                      <label className="text-sm font-medium">{slider.label}</label>
-                      <span className="text-sm text-muted-foreground">{assetSliders[slider.name as keyof typeof assetSliders]}%</span>
+            <div className="space-y-6 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  {steps[currentStep].sliders?.map((slider) => (
+                    <div key={slider.name} className="space-y-2">
+                      <div className="flex justify-between">
+                        <label className="text-sm font-medium">{slider.label}</label>
+                        <span className="text-sm font-bold text-primary">{assetSliders[slider.name as keyof typeof assetSliders]}%</span>
+                      </div>
+                      <Slider
+                        value={[assetSliders[slider.name as keyof typeof assetSliders]]}
+                        onValueChange={(value) => adjustSliders(slider.name, value[0])}
+                        max={slider.max}
+                        min={slider.min}
+                        step={slider.step}
+                        className="w-full"
+                      />
                     </div>
-                    <Slider
-                      value={[assetSliders[slider.name as keyof typeof assetSliders]]}
-                      onValueChange={(value) => setAssetSliders(prev => ({ ...prev, [slider.name]: value[0] }))}
-                      max={slider.max}
-                      min={slider.min}
-                      step={slider.step}
-                      className="w-full"
-                    />
+                  ))}
+                  <div className="flex justify-between items-center p-3 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border">
+                    <span className="text-sm font-medium">Total:</span>
+                    <span className={`text-lg font-bold ${Object.values(assetSliders).reduce((sum, val) => sum + val, 0) === 100 ? 'text-green-600' : 'text-orange-600'}`}>
+                      {Object.values(assetSliders).reduce((sum, val) => sum + val, 0)}%
+                    </span>
                   </div>
-                ))}
+                </div>
+                
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium text-center">Aperçu de votre répartition</h4>
+                  <AllocationChart data={assetSliders} />
+                </div>
               </div>
-              <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-                <span className="text-sm font-medium">Total:</span>
-                <span className={`text-sm font-bold ${Object.values(assetSliders).reduce((sum, val) => sum + val, 0) === 100 ? 'text-green-600' : 'text-orange-600'}`}>
-                  {Object.values(assetSliders).reduce((sum, val) => sum + val, 0)}%
-                </span>
-              </div>
+              
               <Button 
-                onClick={() => {
-                  if (Object.values(assetSliders).reduce((sum, val) => sum + val, 0) === 100) {
-                    handleSendMessage();
-                  } else {
-                    toast({
-                      title: "Erreur",
-                      description: "La répartition doit totaliser exactement 100%",
-                      variant: "destructive"
-                    });
-                  }
-                }}
+                onClick={() => handleSendMessage()}
                 className="w-full"
                 variant="gradient"
+                disabled={Object.values(assetSliders).reduce((sum, val) => sum + val, 0) !== 100}
               >
-                Valider la répartition
+                {Object.values(assetSliders).reduce((sum, val) => sum + val, 0) === 100 
+                  ? "Valider ma répartition" 
+                  : `Ajustez pour atteindre 100% (actuellement ${Object.values(assetSliders).reduce((sum, val) => sum + val, 0)}%)`
+                }
               </Button>
             </div>
           )}
