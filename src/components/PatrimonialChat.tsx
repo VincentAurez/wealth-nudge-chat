@@ -894,7 +894,7 @@ Précisez votre question sur l'épargne, les placements, la retraite ou la fisca
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-primary/5 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-background via-accent/10 to-primary/10 p-4">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <motion.div 
@@ -931,7 +931,7 @@ Précisez votre question sur l'épargne, les placements, la retraite ou la fisca
         </motion.div>
 
         {/* Progress */}
-        <Card className="p-6">
+        <Card className="p-6 bg-gradient-to-r from-card via-primary/5 to-accent/5">
           <div className="flex items-center justify-between mb-2">
             <span className="font-medium">Progression</span>
             <span className="text-sm text-muted-foreground">
@@ -970,13 +970,13 @@ Précisez votre question sur l'épargne, les placements, la retraite ou la fisca
         />
 
         {/* Chat */}
-        <Card className="p-6">
+        <Card className="p-6 bg-gradient-to-br from-card via-secondary/10 to-primary/5 border-primary/20">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
           >
-            <ScrollArea className="h-96 mb-4" ref={scrollAreaRef}>
+            <ScrollArea className="h-[600px] mb-4" ref={scrollAreaRef}>
               <div className="space-y-4">
                 {messages.map((message, index) => (
                   <motion.div
@@ -1169,9 +1169,9 @@ Précisez votre question sur l'épargne, les placements, la retraite ou la fisca
                       />
                     </div>
                   ))}
-                  <div className="flex justify-between items-center p-3 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border">
+                  <div className="flex justify-between items-center p-3 bg-gradient-to-r from-success/10 to-primary/10 rounded-lg border border-success/20">
                     <span className="text-sm font-medium">Total:</span>
-                    <span className={`text-lg font-bold ${Object.values(assetSliders).reduce((sum, val) => sum + val, 0) === 100 ? 'text-green-600' : 'text-orange-600'}`}>
+                    <span className={`text-lg font-bold ${Object.values(assetSliders).reduce((sum, val) => sum + val, 0) === 100 ? 'text-success' : 'text-accent'}`}>
                       {Object.values(assetSliders).reduce((sum, val) => sum + val, 0)}%
                     </span>
                   </div>
