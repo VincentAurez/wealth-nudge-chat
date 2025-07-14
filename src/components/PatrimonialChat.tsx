@@ -417,7 +417,8 @@ Découvrons maintenant votre profil de risque !`;
   };
 
   const handleSendMessage = () => {
-    if (!inputValue.trim()) return;
+    // Skip input validation for sliders and objectives which don't use inputValue
+    if (currentStep < steps.length && steps[currentStep].type !== 'sliders' && steps[currentStep].type !== 'objectives' && !inputValue.trim() && !askingPhone) return;
 
     // Special handling for phone after email
     if (askingPhone) {
