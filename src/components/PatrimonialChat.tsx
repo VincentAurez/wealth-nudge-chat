@@ -20,6 +20,10 @@ export interface UserData {
   currentSavings?: number;
   savingsEffort?: number;
   riskProfile?: 'PRUDENT' | 'EQUILIBRE' | 'DYNAMIQUE';
+  email?: string;
+  phone?: string;
+  goals?: string;
+  currentAllocation?: string;
 }
 
 interface Message {
@@ -92,6 +96,13 @@ const chatSteps: ChatStep[] = [
     options: ['Prudent (sécurité avant tout)', 'Équilibré (compromis rendement/risque)', 'Dynamique (recherche de performance)'],
     field: 'riskProfile',
     completed: false
+  },
+  {
+    id: 'contact',
+    question: "Pour finaliser votre profil, j'ai besoin de vos coordonnées. Entrez votre email :",
+    type: 'text',
+    field: 'email',
+    completed: false
   }
 ];
 
@@ -108,6 +119,8 @@ export function PatrimonialChat() {
   const [userData, setUserData] = useState<UserData>({});
   const [inputValue, setInputValue] = useState("");
   const [steps, setSteps] = useState(chatSteps);
+  const [askingPhone, setAskingPhone] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -161,7 +174,56 @@ export function PatrimonialChat() {
   };
 
   const handleSendMessage = () => {
-    if (!inputValue.trim() || currentStep >= steps.length) return;
+    if (!inputValue.trim()) return;
+
+    // Special handling for phone after email
+    if (askingPhone) {
+      // Validate phone format
+      if (inputValue.length < 10) {
+        toast({
+          title: "Erreur",
+          description: "Veuillez entrer un numéro de téléphone valide",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        type: 'user',
+        content: inputValue
+      };
+
+      const newUserData = { ...userData, phone: inputValue };
+      setUserData(newUserData);
+
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: "Parfait ! Maintenant vous avez terminé votre profil patrimonial complet. Voici un résumé de votre positionnement par rapport aux autres Français.",
+        showStats: true,
+        data: newUserData
+      };
+
+      setMessages(prev => [...prev, userMessage, assistantMessage]);
+      setAskingPhone(false);
+      setIsCompleted(true);
+
+      // Mark contact step as completed
+      const newSteps = [...steps];
+      newSteps[currentStep].completed = true;
+      setSteps(newSteps);
+
+      toast({
+        title: "Profil complété !",
+        description: "Vous débloquez votre analyse patrimoniale complète",
+      });
+
+      setInputValue("");
+      return;
+    }
+
+    if (currentStep >= steps.length) return;
 
     const currentStepData = steps[currentStep];
     let processedValue: any = inputValue;
@@ -184,6 +246,17 @@ export function PatrimonialChat() {
         if (inputValue.includes('Prudent')) processedValue = 'PRUDENT';
         else if (inputValue.includes('Équilibré')) processedValue = 'EQUILIBRE';
         else if (inputValue.includes('Dynamique')) processedValue = 'DYNAMIQUE';
+      }
+    } else if (currentStepData.type === 'text' && currentStepData.field === 'email') {
+      // Validate email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(inputValue)) {
+        toast({
+          title: "Erreur",
+          description: "Veuillez entrer un email valide",
+          variant: "destructive"
+        });
+        return;
       }
     }
 
@@ -216,8 +289,19 @@ export function PatrimonialChat() {
 
     setMessages(prev => [...prev, userMessage, assistantMessage]);
 
-    // Move to next step or finish
-    if (currentStep < steps.length - 1) {
+    // Special handling for email step - ask for phone next
+    if (currentStepData.field === 'email') {
+      setTimeout(() => {
+        const phoneMessage: Message = {
+          id: (Date.now() + 2).toString(),
+          type: 'assistant',
+          content: "Maintenant, votre numéro de téléphone (format : +33 X XX XX XX XX) :"
+        };
+        setMessages(prev => [...prev, phoneMessage]);
+        setAskingPhone(true);
+      }, 1500);
+    } else if (currentStep < steps.length - 1) {
+      // Move to next step
       setTimeout(() => {
         const nextStepMessage: Message = {
           id: (Date.now() + 2).toString(),
@@ -226,23 +310,6 @@ export function PatrimonialChat() {
         };
         setMessages(prev => [...prev, nextStepMessage]);
         setCurrentStep(currentStep + 1);
-      }, 1500);
-    } else {
-      // Finish - show final summary
-      setTimeout(() => {
-        const finalMessage: Message = {
-          id: (Date.now() + 2).toString(),
-          type: 'assistant',
-          content: "Félicitations ! Vous avez terminé votre profil patrimonial. Voici un résumé de votre positionnement par rapport aux autres Français.",
-          showStats: true,
-          data: newUserData
-        };
-        setMessages(prev => [...prev, finalMessage]);
-        
-        toast({
-          title: "Profil complété !",
-          description: "Vous débloquez votre analyse patrimoniale complète",
-        });
       }, 1500);
     }
 
@@ -364,14 +431,18 @@ export function PatrimonialChat() {
           {renderQuickOptions()}
 
           {/* Input */}
-          {currentStep < steps.length && (
+          {(currentStep < steps.length && !askingPhone) || askingPhone ? (
             <div className="flex gap-2">
               <Input
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder={
-                  steps[currentStep]?.type === 'number' 
+                  askingPhone 
+                    ? "Entrez votre téléphone (+33 X XX XX XX XX)..."
+                    : steps[currentStep]?.type === 'number' 
                     ? "Entrez un nombre..." 
+                    : steps[currentStep]?.type === 'text' && steps[currentStep]?.field === 'email'
+                    ? "Entrez votre email..."
                     : "Votre réponse..."
                 }
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
@@ -384,9 +455,9 @@ export function PatrimonialChat() {
                 <Send className="w-4 h-4" />
               </Button>
             </div>
-          )}
+          ) : null}
           
-          {currentStep >= steps.length && (
+          {currentStep >= steps.length && !askingPhone && (
             <div className="text-center py-8">
               <div className="inline-flex items-center gap-2 px-6 py-3 bg-success text-success-foreground rounded-lg font-medium">
                 <Award className="w-5 h-5" />

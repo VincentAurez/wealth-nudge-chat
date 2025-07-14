@@ -1,14 +1,30 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { StatsCard } from "@/components/StatsCard";
+import { ObjectivesModal } from "@/components/ObjectivesModal";
 import { UserData } from "@/components/PatrimonialChat";
-import { TrendingUp, Users, Award, Target, Sparkles } from "lucide-react";
+import { TrendingUp, Users, Award, Target, Sparkles, Calendar, ExternalLink } from "lucide-react";
+import { useState, useEffect } from "react";
 
 interface PatrimonialSummaryProps {
   userData: UserData;
 }
 
 export function PatrimonialSummary({ userData }: PatrimonialSummaryProps) {
+  const [showObjectivesModal, setShowObjectivesModal] = useState(false);
+  const [modalViewed, setModalViewed] = useState(false);
+
+  // Auto-open modal when component mounts (only once)
+  useEffect(() => {
+    if (!modalViewed) {
+      const timer = setTimeout(() => {
+        setShowObjectivesModal(true);
+        setModalViewed(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [modalViewed]);
   const calculatePercentile = (field: keyof UserData, value: any): number => {
     switch (field) {
       case 'age':
@@ -261,10 +277,41 @@ export function PatrimonialSummary({ userData }: PatrimonialSummaryProps) {
         <p className="text-muted-foreground mb-4">
           Vous avez maintenant une vision claire de votre position patrimoniale par rapport aux autres Français.
         </p>
-        <Badge variant="outline" className="bg-success/10 text-success border-success/30">
+        <Badge variant="outline" className="bg-success/10 text-success border-success/30 mb-6">
           Profil patrimonial complété à 100%
         </Badge>
+        
+        {/* CTA Calendly */}
+        <div className="pt-4 border-t border-border/30">
+          <h4 className="text-lg font-semibold mb-3">Prêt pour la suite ?</h4>
+          <p className="text-sm text-muted-foreground mb-4">
+            Discutez de vos objectifs avec un conseiller patrimonial expérimenté
+          </p>
+          <Button
+            asChild
+            size="lg"
+            className="bg-[#d3381c] text-white hover:bg-[#bb2e17] shadow-lg hover:shadow-xl transition-all duration-300"
+          >
+            <a 
+              href="https://calendly.com/votre-conseiller/30min" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2"
+            >
+              <Calendar className="w-5 h-5" />
+              Prendre un rendez-vous avec un conseiller
+              <ExternalLink className="w-4 h-4" />
+            </a>
+          </Button>
+        </div>
       </Card>
+
+      {/* Objectives Modal */}
+      <ObjectivesModal
+        isOpen={showObjectivesModal}
+        onClose={() => setShowObjectivesModal(false)}
+        userData={userData}
+      />
     </div>
   );
 }
