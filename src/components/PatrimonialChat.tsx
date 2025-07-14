@@ -5,14 +5,16 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Slider } from "@/components/ui/slider";
 import { StatsCard } from "@/components/StatsCard";
 import { PatrimonialSummary } from "@/components/PatrimonialSummary";
 import { GamificationBadges } from "@/components/GamificationBadges";
-import { Send, TrendingUp, Users, Award, Target, Sparkles } from "lucide-react";
+import { Send, TrendingUp, Users, Award, Target, Sparkles, Home, MapPin, Flag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export interface UserData {
   age?: number;
+  zipcode?: string;
   householdStructure?: string;
   csp?: string;
   employmentStatus?: 'TNS' | 'SALARIE';
@@ -20,6 +22,13 @@ export interface UserData {
   currentSavings?: number;
   savingsEffort?: number;
   riskProfile?: 'PRUDENT' | 'EQUILIBRE' | 'DYNAMIQUE';
+  assetSplit?: {
+    livrets: number;
+    assuranceVie: number;
+    actions: number;
+    immo: number;
+    autres: number;
+  };
   email?: string;
   phone?: string;
   goals?: string;
@@ -32,13 +41,19 @@ interface Message {
   content: string;
   data?: any;
   showStats?: boolean;
+  insights?: {
+    local?: { icon: string; label: string; value: number; message: string };
+    peers?: { icon: string; label: string; value: number; message: string };
+    france?: { icon: string; label: string; value: number; message: string };
+  };
 }
 
 interface ChatStep {
   id: string;
   question: string;
-  type: 'number' | 'select' | 'text';
+  type: 'number' | 'select' | 'text' | 'sliders';
   options?: string[];
+  sliders?: { name: string; label: string; min: number; max: number; step: number }[];
   field: keyof UserData;
   completed: boolean;
 }
@@ -49,6 +64,13 @@ const chatSteps: ChatStep[] = [
     question: "Quel est votre âge ? Cette information m'aidera à vous comparer avec vos pairs.",
     type: 'number',
     field: 'age',
+    completed: false
+  },
+  {
+    id: 'zipcode',
+    question: "Quel est votre code postal ? Cela me permettra de vous comparer aux habitants de votre département.",
+    type: 'text',
+    field: 'zipcode',
     completed: false
   },
   {
@@ -98,6 +120,20 @@ const chatSteps: ChatStep[] = [
     completed: false
   },
   {
+    id: 'assets',
+    question: "Comment se répartit aujourd'hui votre patrimoine ? Ajustez les curseurs pour indiquer la part approximative de chaque classe d'actifs (total 100%).",
+    type: 'sliders',
+    field: 'assetSplit',
+    sliders: [
+      { name: 'livrets', label: 'Livrets & trésorerie', min: 0, max: 100, step: 5 },
+      { name: 'assuranceVie', label: 'Assurance-vie fonds €', min: 0, max: 100, step: 5 },
+      { name: 'actions', label: 'Actions / UC', min: 0, max: 100, step: 5 },
+      { name: 'immo', label: 'Immobilier locatif / SCPI', min: 0, max: 100, step: 5 },
+      { name: 'autres', label: 'Autres', min: 0, max: 100, step: 5 }
+    ],
+    completed: false
+  },
+  {
     id: 'contact',
     question: "Pour finaliser votre profil, j'ai besoin de vos coordonnées. Entrez votre email :",
     type: 'text',
@@ -118,6 +154,13 @@ export function PatrimonialChat() {
   const [currentStep, setCurrentStep] = useState(0);
   const [userData, setUserData] = useState<UserData>({});
   const [inputValue, setInputValue] = useState("");
+  const [assetSliders, setAssetSliders] = useState({
+    livrets: 20,
+    assuranceVie: 30,
+    actions: 20,
+    immo: 20,
+    autres: 10
+  });
   const [steps, setSteps] = useState(chatSteps);
   const [askingPhone, setAskingPhone] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
@@ -132,45 +175,85 @@ export function PatrimonialChat() {
     }
   }, [messages]);
 
-  const generateComparison = (field: keyof UserData, value: any) => {
+  const generateInsights = (field: keyof UserData, value: any) => {
+    const dept = userData.zipcode ? userData.zipcode.substring(0, 2) : '75';
+    const age = userData.age || 40;
+    const ageGroup = age < 30 ? '<30' : age < 40 ? '30-40' : age < 50 ? '40-50' : age < 60 ? '50-60' : '60+';
+    
+    // Mock local comparison (département)
+    const localRank = Math.floor(Math.random() * 30) + 55; // 55-85%
+    
+    // Mock peer comparison (age + household + CSP)
+    const peerRank = Math.floor(Math.random() * 40) + 45; // 45-85%
+    
+    // Mock France comparison
+    const franceRank = Math.floor(Math.random() * 50) + 40; // 40-90%
+    
+    let baseMessage = "";
+    
     switch (field) {
       case 'age':
         if (value < 40) {
-          return `À ${value} ans, vous faites partie des jeunes qui s'intéressent tôt au conseil patrimonial ! La moyenne d'âge des clients est de 60 ans. C'est un atout : vous avez plus de temps pour faire fructifier votre patrimoine.`;
+          baseMessage = `À ${value} ans, vous anticipez plus tôt que la moyenne !`;
         } else if (value >= 40 && value < 55) {
-          return `À ${value} ans, vous êtes plus jeune que la moyenne des clients patrimoniaux (60 ans). Près de 47% des conseillers notent un rajeunissement de leur clientèle, vous faites partie de cette nouvelle génération.`;
+          baseMessage = `À ${value} ans, vous rejoignez la nouvelle génération de clients patrimoniaux.`;
         } else {
-          return `À ${value} ans, vous êtes dans la tranche d'âge typique des clients patrimoniaux. C'est à cet âge que la plupart des Français commencent à structurer leur patrimoine pour la retraite.`;
+          baseMessage = `À ${value} ans, vous êtes dans la tranche d'âge typique du conseil patrimonial.`;
         }
+        break;
+      
+      case 'zipcode':
+        baseMessage = `Votre code postal ${value} me permet de vous comparer aux habitants de votre département.`;
+        break;
       
       case 'monthlyIncome':
-        if (value <= 1512) {
-          return `Avec ${value}€ nets mensuels, vous êtes dans les 10% les plus modestes. Cela ne vous empêche pas d'optimiser votre épargne ! Même avec des moyens limités, chaque euro compte.`;
-        } else if (value <= 2183) {
-          return `Avec ${value}€ nets mensuels, vous êtes proche du revenu médian français (2 183€). La moitié des Français gagnent moins que vous, la moitié gagnent plus.`;
-        } else if (value <= 3000) {
-          return `Avec ${value}€ nets mensuels, vous gagnez plus que 60% des Français ! Vous avez un potentiel d'épargne intéressant à optimiser.`;
+        if (value <= 2183) {
+          baseMessage = `Avec ${value}€ nets mensuels, vous êtes proche de la médiane française.`;
         } else if (value <= 4302) {
-          return `Avec ${value}€ nets mensuels, vous faites partie des 20% les mieux rémunérés. Votre capacité d'épargne est nettement supérieure à la moyenne.`;
+          baseMessage = `Avec ${value}€ nets mensuels, vous avez un bon potentiel d'épargne.`;
         } else {
-          return `Avec ${value}€ nets mensuels, vous êtes dans le top 10% des revenus français ! Vous avez un potentiel patrimonial très important à structurer.`;
+          baseMessage = `Avec ${value}€ nets mensuels, vous avez un potentiel patrimonial important.`;
         }
+        break;
       
       case 'currentSavings':
         const savingsRate = userData.monthlyIncome ? (value / userData.monthlyIncome) * 100 : 0;
-        if (savingsRate < 8) {
-          return `Vous épargnez ${savingsRate.toFixed(1)}% de vos revenus. C'est en dessous de la moyenne française (17-18%). Il y a de la marge pour optimiser !`;
-        } else if (savingsRate >= 8 && savingsRate < 15) {
-          return `Vous épargnez ${savingsRate.toFixed(1)}% de vos revenus. C'est correct mais encore en dessous de la moyenne française (17-18%).`;
+        if (savingsRate < 15) {
+          baseMessage = `Vous épargnez ${savingsRate.toFixed(1)}% de vos revenus, il y a de la marge !`;
         } else if (savingsRate >= 15 && savingsRate < 25) {
-          return `Bravo ! Vous épargnez ${savingsRate.toFixed(1)}% de vos revenus, dans la moyenne française. Vous avez de bonnes habitudes d'épargne.`;
+          baseMessage = `Bravo ! Vous épargnez ${savingsRate.toFixed(1)}% de vos revenus.`;
         } else {
-          return `Excellent ! Vous épargnez ${savingsRate.toFixed(1)}% de vos revenus, bien au-dessus de la moyenne française (17-18%). Vous faites partie des épargnants exemplaires !`;
+          baseMessage = `Excellent ! Vous épargnez ${savingsRate.toFixed(1)}% de vos revenus.`;
         }
+        break;
       
       default:
-        return "Merci pour cette information ! Elle m'aide à mieux cerner votre profil.";
+        baseMessage = "Merci pour cette information !";
     }
+    
+    return {
+      message: baseMessage,
+      insights: {
+        local: {
+          icon: "🏠",
+          label: `Dept. ${dept}`,
+          value: localRank,
+          message: `${localRank}e percentile dans votre département`
+        },
+        peers: {
+          icon: "👥",
+          label: `Pairs (${ageGroup})`,
+          value: peerRank,
+          message: `${peerRank}e percentile parmi vos pairs`
+        },
+        france: {
+          icon: "🇫🇷",
+          label: "France",
+          value: franceRank,
+          message: `${franceRank}e percentile en France`
+        }
+      }
+    };
   };
 
   const handleSendMessage = () => {
@@ -247,24 +330,41 @@ export function PatrimonialChat() {
         else if (inputValue.includes('Équilibré')) processedValue = 'EQUILIBRE';
         else if (inputValue.includes('Dynamique')) processedValue = 'DYNAMIQUE';
       }
-    } else if (currentStepData.type === 'text' && currentStepData.field === 'email') {
-      // Validate email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(inputValue)) {
-        toast({
-          title: "Erreur",
-          description: "Veuillez entrer un email valide",
-          variant: "destructive"
-        });
-        return;
+    } else if (currentStepData.type === 'text') {
+      if (currentStepData.field === 'email') {
+        // Validate email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(inputValue)) {
+          toast({
+            title: "Erreur",
+            description: "Veuillez entrer un email valide",
+            variant: "destructive"
+          });
+          return;
+        }
+      } else if (currentStepData.field === 'zipcode') {
+        // Validate zipcode
+        if (!/^\d{5}$/.test(inputValue)) {
+          toast({
+            title: "Erreur",
+            description: "Veuillez entrer un code postal valide (5 chiffres)",
+            variant: "destructive"
+          });
+          return;
+        }
       }
+    } else if (currentStepData.type === 'sliders') {
+      // Handle asset split sliders
+      processedValue = assetSliders;
     }
 
     // Add user message
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
-      content: inputValue
+      content: currentStepData.type === 'sliders' 
+        ? `Répartition : Livrets ${assetSliders.livrets}%, Assurance-vie ${assetSliders.assuranceVie}%, Actions ${assetSliders.actions}%, Immobilier ${assetSliders.immo}%, Autres ${assetSliders.autres}%`
+        : inputValue
     };
 
     // Update user data
@@ -276,14 +376,15 @@ export function PatrimonialChat() {
     newSteps[currentStep].completed = true;
     setSteps(newSteps);
 
-    // Generate comparison
-    const comparison = generateComparison(currentStepData.field, processedValue);
+    // Generate insights
+    const insightData = generateInsights(currentStepData.field, processedValue);
     
     const assistantMessage: Message = {
       id: (Date.now() + 1).toString(),
       type: 'assistant',
-      content: comparison,
+      content: insightData.message,
       showStats: true,
+      insights: insightData.insights,
       data: { field: currentStepData.field, value: processedValue }
     };
 
@@ -429,6 +530,53 @@ export function PatrimonialChat() {
 
           {/* Quick options */}
           {renderQuickOptions()}
+          
+          {/* Asset Sliders */}
+          {currentStep < steps.length && steps[currentStep].type === 'sliders' && (
+            <div className="space-y-4 mb-4">
+              <div className="grid grid-cols-1 gap-4">
+                {steps[currentStep].sliders?.map((slider) => (
+                  <div key={slider.name} className="space-y-2">
+                    <div className="flex justify-between">
+                      <label className="text-sm font-medium">{slider.label}</label>
+                      <span className="text-sm text-muted-foreground">{assetSliders[slider.name as keyof typeof assetSliders]}%</span>
+                    </div>
+                    <Slider
+                      value={[assetSliders[slider.name as keyof typeof assetSliders]]}
+                      onValueChange={(value) => setAssetSliders(prev => ({ ...prev, [slider.name]: value[0] }))}
+                      max={slider.max}
+                      min={slider.min}
+                      step={slider.step}
+                      className="w-full"
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                <span className="text-sm font-medium">Total:</span>
+                <span className={`text-sm font-bold ${Object.values(assetSliders).reduce((sum, val) => sum + val, 0) === 100 ? 'text-green-600' : 'text-orange-600'}`}>
+                  {Object.values(assetSliders).reduce((sum, val) => sum + val, 0)}%
+                </span>
+              </div>
+              <Button 
+                onClick={() => {
+                  if (Object.values(assetSliders).reduce((sum, val) => sum + val, 0) === 100) {
+                    handleSendMessage();
+                  } else {
+                    toast({
+                      title: "Erreur",
+                      description: "La répartition doit totaliser exactement 100%",
+                      variant: "destructive"
+                    });
+                  }
+                }}
+                className="w-full"
+                variant="gradient"
+              >
+                Valider la répartition
+              </Button>
+            </div>
+          )}
 
           {/* Input */}
           {(currentStep < steps.length && !askingPhone) || askingPhone ? (
