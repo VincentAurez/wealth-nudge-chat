@@ -183,32 +183,134 @@ const getTrend = (
     }
   };
 
-  const generateFinalAdvice = (): string => {
-    const { age, monthlyIncome, currentSavings, employmentStatus, riskProfile } = userData;
-    let advice = "🎯 **Recommandations personnalisées :**\n\n";
-
-    // Age-based advice
-    if (age && age < 40) {
-      advice += "• **Avantage temps** : Avec votre jeune âge, misez sur le long terme et les intérêts composés\n";
-    } else if (age && age > 55) {
-      advice += "• **Optimisation retraite** : Priorité à la sécurisation et aux dispositifs de défiscalisation\n";
-    }
-
-    // Income-based advice
-    if (monthlyIncome && monthlyIncome > 4000) {
-      advice += "• **Optimisation fiscale** : Vos revenus justifient PER, défiscalisation immobilière, assurance-vie\n";
-    }
-
-    // Savings rate advice
+  const generatePersonalizedAdvice = () => {
+    const { age, monthlyIncome, currentSavings, employmentStatus, riskProfile, goalsPriority } = userData;
     const savingsRate = (monthlyIncome && currentSavings) ? (currentSavings / monthlyIncome) * 100 : 0;
-    if (savingsRate < 15) {
-      advice += "• **Augmentation épargne** : Potentiel de +50% d'épargne possible avec optimisation budget\n";
+    
+    const advice = [];
+
+    // Immediate action steps
+    const immediateActions = [];
+    const mediumTermActions = [];
+    const longTermActions = [];
+
+    // Age-based strategy
+    if (age && age < 35) {
+      immediateActions.push({
+        icon: "🚀",
+        title: "Maximiser l'effet temps",
+        description: "Ouvrir un PEA pour profiter de 20+ ans d'exonération fiscale",
+        priority: "Urgent"
+      });
+      longTermActions.push({
+        icon: "📈",
+        title: "Stratégie aggressive",
+        description: "Allocation 70% actions / 30% obligations possible à votre âge",
+        projection: `Potentiel +${Math.round((currentSavings || 0) * 0.7 * Math.pow(1.07, 30 - (age || 25)))}€ à 55 ans`
+      });
+    } else if (age && age >= 35 && age < 50) {
+      immediateActions.push({
+        icon: "⚖️",
+        title: "Équilibrer et sécuriser",
+        description: "Diversifier entre immobilier, actions et fonds sécurisés",
+        priority: "Important"
+      });
+      mediumTermActions.push({
+        icon: "🏠",
+        title: "Investissement immobilier",
+        description: "Envisager SCPI ou investissement locatif selon votre capacité",
+        estimation: `Avec ${currentSavings || 0}€/mois, apport possible: ${Math.round((currentSavings || 0) * 12 * 5)}€`
+      });
+    } else if (age && age >= 50) {
+      immediateActions.push({
+        icon: "🛡️",
+        title: "Sécuriser les acquis",
+        description: "Privilégier fonds euro et obligations pour protéger le capital",
+        priority: "Critique"
+      });
+      immediateActions.push({
+        icon: "💰",
+        title: "Optimiser la retraite",
+        description: "Maximiser les versements sur PER pour défiscalisation",
+        economy: `Économie fiscale possible: ${Math.round((monthlyIncome || 0) * 12 * 0.3 * 0.3)}€/an`
+      });
     }
 
-    // Risk profile advice
-    if (riskProfile === 'PRUDENT' && age && age < 50) {
-      advice += "• **Diversification** : Votre âge permet plus de prise de risque pour optimiser le rendement\n";
+    // Income-based optimization
+    if (monthlyIncome && monthlyIncome > 4000) {
+      immediateActions.push({
+        icon: "🎯",
+        title: "Défiscalisation avancée",
+        description: "PER, Pinel, FCPI/FIP selon votre tranche marginale",
+        priority: "Rentable",
+        economy: `Réduction d'impôt possible: ${Math.round(monthlyIncome * 12 * 0.2 * 0.41)}€/an`
+      });
     }
+
+    // Savings rate optimization
+    if (savingsRate < 15) {
+      immediateActions.push({
+        icon: "💡",
+        title: "Optimiser le budget",
+        description: "Analyser vos charges pour augmenter l'épargne",
+        priority: "Urgent",
+        potential: `+${Math.round((monthlyIncome || 0) * 0.15 - (currentSavings || 0))}€/mois possible`
+      });
+    } else if (savingsRate > 25) {
+      mediumTermActions.push({
+        icon: "🎖️",
+        title: "Excellent épargnant",
+        description: "Optimiser l'allocation pour maximiser le rendement",
+        recognition: "Top 10% des épargnants français"
+      });
+    }
+
+    // Risk profile optimization
+    if (riskProfile === 'PRUDENT' && age && age < 45) {
+      mediumTermActions.push({
+        icon: "📊",
+        title: "Éducation financière",
+        description: "Formation aux investissements pour dépasser la peur du risque",
+        impact: "Rendement potentiel +2-4%/an avec diversification actions"
+      });
+    }
+
+    // Goals-based advice
+    if (goalsPriority && goalsPriority.length > 0) {
+      const primaryGoal = goalsPriority[0];
+      if (primaryGoal.includes('retraite')) {
+        longTermActions.push({
+          icon: "🏖️",
+          title: "Plan retraite personnalisé",
+          description: "Calculer le capital nécessaire pour votre niveau de vie souhaité",
+          calculation: `Capital estimé nécessaire: ${Math.round((monthlyIncome || 0) * 12 * 25)}€`
+        });
+      }
+      if (primaryGoal.includes('immobilier') || primaryGoal.includes('résidence')) {
+        mediumTermActions.push({
+          icon: "🏡",
+          title: "Projet immobilier",
+          description: "Optimiser l'apport et négocier le meilleur taux",
+          timeline: "Réalisable dans 2-3 ans selon votre épargne actuelle"
+        });
+      }
+    }
+
+    return { immediateActions, mediumTermActions, longTermActions };
+  };
+
+  const generateFinalAdvice = (): string => {
+    const { immediateActions } = generatePersonalizedAdvice();
+    let advice = "🎯 **Actions prioritaires pour vous :**\n\n";
+    
+    immediateActions.slice(0, 3).forEach((action, index) => {
+      advice += `${index + 1}. **${action.title}** ${action.icon}\n`;
+      advice += `   ${action.description}\n`;
+      if (action.priority) advice += `   🏷️ Priorité: ${action.priority}\n`;
+      if (action.economy) advice += `   💰 ${action.economy}\n`;
+      if (action.potential) advice += `   📈 ${action.potential}\n`;
+      advice += "\n";
+    });
 
     return advice;
   };
@@ -322,14 +424,152 @@ const getTrend = (
         />
       </Card>
 
-      <Card className="p-6 text-center bg-gradient-to-r from-success/5 to-primary/5">
-        <Award className="w-12 h-12 mx-auto mb-4 text-success" />
-        <h3 className="text-xl font-bold mb-2">Félicitations !</h3>
-        <p className="text-muted-foreground mb-4">
-          Vous avez maintenant une vision claire de votre position patrimoniale par rapport aux autres Français.
+      {/* Advanced Action Plan */}
+      {(() => {
+        const { immediateActions, mediumTermActions, longTermActions } = generatePersonalizedAdvice();
+        return (
+          <div className="space-y-6">
+            {/* Immediate Actions */}
+            {immediateActions.length > 0 && (
+              <Card className="p-6 bg-gradient-to-r from-destructive/5 to-orange-500/5 border-destructive/20">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-gradient-to-r from-destructive to-orange-500 rounded-lg text-white">
+                    <Target className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-lg font-bold">Actions Immédiates (0-3 mois)</h3>
+                </div>
+                <div className="grid gap-4">
+                  {immediateActions.map((action, index) => (
+                    <div key={index} className="flex items-start gap-3 p-4 bg-background/60 rounded-lg border border-destructive/10">
+                      <span className="text-2xl">{action.icon}</span>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-sm">{action.title}</h4>
+                        <p className="text-muted-foreground text-sm mb-2">{action.description}</p>
+                        <div className="flex flex-wrap gap-2 text-xs">
+                          {action.priority && (
+                            <Badge variant="destructive" className="text-xs">{action.priority}</Badge>
+                          )}
+                          {action.economy && (
+                            <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">{action.economy}</Badge>
+                          )}
+                          {action.potential && (
+                            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">{action.potential}</Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* Medium Term Actions */}
+            {mediumTermActions.length > 0 && (
+              <Card className="p-6 bg-gradient-to-r from-blue-500/5 to-primary/5 border-blue-500/20">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-gradient-to-r from-blue-500 to-primary rounded-lg text-white">
+                    <TrendingUp className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-lg font-bold">Objectifs Moyen Terme (3-12 mois)</h3>
+                </div>
+                <div className="grid gap-4">
+                  {mediumTermActions.map((action, index) => (
+                    <div key={index} className="flex items-start gap-3 p-4 bg-background/60 rounded-lg border border-blue-500/10">
+                      <span className="text-2xl">{action.icon}</span>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-sm">{action.title}</h4>
+                        <p className="text-muted-foreground text-sm mb-2">{action.description}</p>
+                        <div className="flex flex-wrap gap-2 text-xs">
+                          {action.estimation && (
+                            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">{action.estimation}</Badge>
+                          )}
+                          {action.timeline && (
+                            <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800">{action.timeline}</Badge>
+                          )}
+                          {action.recognition && (
+                            <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800">{action.recognition}</Badge>
+                          )}
+                          {action.impact && (
+                            <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">{action.impact}</Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* Long Term Actions */}
+            {longTermActions.length > 0 && (
+              <Card className="p-6 bg-gradient-to-r from-purple-500/5 to-accent/5 border-purple-500/20">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-gradient-to-r from-purple-500 to-accent rounded-lg text-white">
+                    <Users className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-lg font-bold">Vision Long Terme (1-10 ans)</h3>
+                </div>
+                <div className="grid gap-4">
+                  {longTermActions.map((action, index) => (
+                    <div key={index} className="flex items-start gap-3 p-4 bg-background/60 rounded-lg border border-purple-500/10">
+                      <span className="text-2xl">{action.icon}</span>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-sm">{action.title}</h4>
+                        <p className="text-muted-foreground text-sm mb-2">{action.description}</p>
+                        <div className="flex flex-wrap gap-2 text-xs">
+                          {action.projection && (
+                            <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">{action.projection}</Badge>
+                          )}
+                          {action.calculation && (
+                            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">{action.calculation}</Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+          </div>
+        );
+      })()}
+
+      <Card className="p-6 text-center bg-gradient-to-br from-success/10 via-primary/5 to-accent/10 border-success/20">
+        <div className="flex justify-center mb-4">
+          <div className="p-4 bg-gradient-to-r from-success to-primary rounded-full">
+            <Award className="w-8 h-8 text-white" />
+          </div>
+        </div>
+        <h3 className="text-2xl font-bold mb-3 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          Félicitations !
+        </h3>
+        <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
+          Vous avez maintenant une feuille de route personnalisée et une vision claire de votre position patrimoniale. 
+          Vous faites désormais partie des <strong>15% de Français</strong> qui ont une stratégie patrimoniale structurée.
         </p>
-        <Badge variant="outline" className="bg-success/10 text-success border-success/30 mb-6">
-          Profil patrimonial complété à 100%
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="p-4 bg-gradient-to-r from-success/10 to-primary/10 rounded-lg border border-success/20">
+            <div className="font-bold text-lg text-success">100%</div>
+            <div className="text-sm text-muted-foreground">Profil complété</div>
+          </div>
+          <div className="p-4 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border border-primary/20">
+            <div className="font-bold text-lg text-primary">{(() => {
+              const { immediateActions, mediumTermActions, longTermActions } = generatePersonalizedAdvice();
+              return immediateActions.length + mediumTermActions.length + longTermActions.length;
+            })()}</div>
+            <div className="text-sm text-muted-foreground">Actions personnalisées</div>
+          </div>
+          <div className="p-4 bg-gradient-to-r from-accent/10 to-orange-500/10 rounded-lg border border-accent/20">
+            <div className="font-bold text-lg text-accent">
+              {userData.goalsPriority?.length || 0}
+            </div>
+            <div className="text-sm text-muted-foreground">Objectifs définis</div>
+          </div>
+        </div>
+
+        <Badge variant="outline" className="bg-success/10 text-success border-success/30 mb-6 px-4 py-2">
+          ✨ Profil patrimonial expert • Niveau : Avancé
         </Badge>
         
         {/* CTA Calendly */}
