@@ -5,11 +5,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Target, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import type { UserData } from "@/components/PatrimonialChat";
 
 interface ObjectivesModalProps {
   isOpen: boolean;
   onClose: () => void;
-  userData: any;
+  userData: UserData;
 }
 
 export function ObjectivesModal({ isOpen, onClose, userData }: ObjectivesModalProps) {

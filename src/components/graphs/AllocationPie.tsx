@@ -37,7 +37,12 @@ export function AllocationPie({ data, benchmark }: AllocationPieProps) {
     { name: 'Autres', value: benchmark.autres },
   ] : [];
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  interface TooltipProps {
+    active?: boolean;
+    payload?: { payload: { name: string; value: number; benchmark?: number } }[];
+  }
+
+  const CustomTooltip = ({ active, payload }: TooltipProps) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
