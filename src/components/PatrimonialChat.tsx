@@ -19,12 +19,42 @@ import { useToast } from "@/hooks/use-toast";
 import { pickObjectivesByAge, calculateTargetSavingRate } from "@/utils/objectives";
 
 const FUN_FACTS = [
-  "💡 1 Français sur 3 vit seul – mais seulement 47 % des personnes seules sont propriétaires.",
-  "🏠 Les couples sans enfant atteignent 78 % de taux de propriété immobilière.",
-  "👶 Les familles monoparentales ont un taux d'épargne 3 × plus bas que la moyenne.",
-  "⚙️ Les indépendants épargnent en moyenne 35 % de leur revenu – record national.",
-  "📊 En France, 60% des ménages possèdent moins de 3 mois de salaire d'épargne de précaution.",
-  "💰 Le patrimoine médian des Français est de 113 900€ mais varie énormément selon l'âge et la région."
+  {
+    text: "💡 Début 2024, 86,9 % des ménages français détiennent au moins un livret d'épargne, et 78,1 % possèdent un Livret A.",
+    source: "Insee Focus 2024"
+  },
+  {
+    text: "🏠 57 % des ménages sont propriétaires de leur résidence principale.",
+    source: "Compte du logement 2023"
+  },
+  {
+    text: "📈 Seuls 17,4 % des ménages détiennent des actions ou OPCVM : la Bourse reste minoritaire en France.",
+    source: "Insee Focus 2024"
+  },
+  {
+    text: "🔑 Les livrets réglementés (Livret A, LDDS, LEP) cumulent ~650 milliards € : assez pour financer six nouveaux réacteurs nucléaires !",
+    source: "Le Monde, 2024"
+  },
+  {
+    text: "🛠️ Les travailleurs indépendants épargnent en moyenne 35 % de leur revenu, soit près du double des salariés.",
+    source: "Insee Comptes nationaux"
+  },
+  {
+    text: "👤 1 Français sur 3 vit seul, et seuls 47 % de ces personnes seules sont propriétaires.",
+    source: "Insee, Ménages 2023"
+  },
+  {
+    text: "🎓 Les familles monoparentales épargnent trois fois moins que la moyenne nationale.",
+    source: "Banque de France, 2023"
+  },
+  {
+    text: "📊 Le taux d'assurance-vie frôle 42 % des ménages, mais reste le placement financier n°1 en montant détenu.",
+    source: "Insee Focus 2024"
+  },
+  {
+    text: "🚀 Depuis 2020, l'épargne supplémentaire mise de côté par les ménages dépasse 200 milliards €.",
+    source: "Banque de France"
+  }
 ];
 
 export interface UserData {
@@ -188,7 +218,7 @@ export function PatrimonialChat() {
   const [steps, setSteps] = useState(chatSteps);
   const [askingPhone, setAskingPhone] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
-  const [funFact, setFunFact] = useState<string | null>(null);
+  const [funFact, setFunFact] = useState<{text: string, source: string} | null>(null);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [showValueAdded, setShowValueAdded] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -427,9 +457,28 @@ export function PatrimonialChat() {
     // Generate insights and fun fact
     const insightData = generateInsights(currentStepData.field, processedValue);
     
-    // Generate a random fun fact after step responses
-    const randomFunFact = FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)];
-    setFunFact(randomFunFact);
+    // Generate deterministic fun fact based on step (age-specific logic)
+    let selectedFact = FUN_FACTS[currentStep % FUN_FACTS.length];
+    
+    // Age-specific facts override
+    if (currentStep === 0 && processedValue) { // Age answered
+      const age = typeof processedValue === 'number' ? processedValue : parseInt(processedValue as string);
+      if (age < 30) {
+        selectedFact = { text: "👶 Les moins de 30 ans ont un taux d'épargne moyen de 8 %.", source: "Insee Comptes nationaux" };
+      } else if (age > 55) {
+        selectedFact = { text: "⏳ Les 55-65 ans épargnent 18 % de leur revenu, deux fois plus qu'à 30 ans.", source: "Insee Comptes nationaux" };
+      }
+    }
+    
+    setFunFact(selectedFact);
+    
+    // Analytics tracking
+    if (typeof window !== 'undefined' && (window as any).lovable?.analytics) {
+      (window as any).lovable.analytics.track("fun_fact_shown", { 
+        step: currentStep, 
+        funFact: selectedFact.text 
+      });
+    }
     
     const assistantMessage: Message = {
       id: (Date.now() + 1).toString(),
@@ -794,7 +843,7 @@ export function PatrimonialChat() {
       {/* Fun fact */}
       {funFact && (
         <div className="mt-4">
-          <FunFactCard text={funFact} />
+          <FunFactCard text={funFact.text} source={funFact.source} />
         </div>
       )}
     </div>
