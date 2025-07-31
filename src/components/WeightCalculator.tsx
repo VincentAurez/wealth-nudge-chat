@@ -2,28 +2,29 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
-import { Scale, TrendingUp, Users, Target, Medal, ArrowUp, Phone } from "lucide-react";
+import { Scale, TrendingUp, Users, Target, Trophy, Crown, Star, Zap, Phone, Sparkles, Rocket } from "lucide-react";
 import { UserData } from "./PatrimonialChat";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface WeightCalculatorProps {
   userData: UserData;
 }
 
 export function WeightCalculator({ userData }: WeightCalculatorProps) {
-  // Calcul du "poids patrimonial" basé sur plusieurs critères
+  const [displayWeight, setDisplayWeight] = useState(0);
+  const [showComparison, setShowComparison] = useState(false);
+
   const calculatePatrimonialWeight = () => {
     let totalWeight = 0;
     let maxWeight = 0;
 
-    // Âge (plus jeune = plus d'avantage temps)
     if (userData.age) {
-      const ageScore = Math.max(0, 65 - userData.age); // Plus on est jeune, plus le score est haut
-      totalWeight += ageScore * 0.3; // 30% du poids total
+      const ageScore = Math.max(0, 65 - userData.age);
+      totalWeight += ageScore * 0.3;
       maxWeight += 30 * 0.3;
     }
 
-    // Revenus (percentile basé sur les données INSEE)
     if (userData.monthlyIncome) {
       let incomeScore = 0;
       if (userData.monthlyIncome <= 1512) incomeScore = 10;
@@ -32,11 +33,10 @@ export function WeightCalculator({ userData }: WeightCalculatorProps) {
       else if (userData.monthlyIncome <= 4302) incomeScore = 90;
       else incomeScore = 95;
       
-      totalWeight += incomeScore * 0.25; // 25% du poids total
+      totalWeight += incomeScore * 0.25;
       maxWeight += 95 * 0.25;
     }
 
-    // Taux d'épargne
     if (userData.currentSavings && userData.monthlyIncome) {
       const savingsRate = (userData.currentSavings / userData.monthlyIncome) * 100;
       let savingsScore = 0;
@@ -45,11 +45,10 @@ export function WeightCalculator({ userData }: WeightCalculatorProps) {
       else if (savingsRate < 25) savingsScore = 70;
       else savingsScore = 90;
       
-      totalWeight += savingsScore * 0.25; // 25% du poids total
+      totalWeight += savingsScore * 0.25;
       maxWeight += 90 * 0.25;
     }
 
-    // CSP (Catégorie Socio-Professionnelle)
     if (userData.csp) {
       let cspScore = 0;
       if (userData.csp.includes('Cadre')) cspScore = 85;
@@ -58,7 +57,7 @@ export function WeightCalculator({ userData }: WeightCalculatorProps) {
       else if (userData.csp.includes('Retraité')) cspScore = 50;
       else cspScore = 40;
       
-      totalWeight += cspScore * 0.2; // 20% du poids total
+      totalWeight += cspScore * 0.2;
       maxWeight += 85 * 0.2;
     }
 
@@ -67,257 +66,216 @@ export function WeightCalculator({ userData }: WeightCalculatorProps) {
 
   const patrimonialWeight = calculatePatrimonialWeight();
 
-  // Calcul du rang approximatif
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      let current = 0;
+      const increment = patrimonialWeight / 50;
+      const interval = setInterval(() => {
+        current += increment;
+        if (current >= patrimonialWeight) {
+          current = patrimonialWeight;
+          clearInterval(interval);
+          setShowComparison(true);
+        }
+        setDisplayWeight(Math.round(current));
+      }, 30);
+      
+      return () => clearInterval(interval);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [patrimonialWeight]);
+
   const calculateRank = (weight: number) => {
-    const totalFrench = 67000000; // Population française
-    const adultFrench = 52000000; // Population adulte approximative
-    
-    // Conversion du poids en rang (plus le poids est élevé, meilleur est le rang)
-    const rankPercentile = weight;
-    const rank = Math.round(adultFrench * (100 - rankPercentile) / 100);
-    
+    const adultFrench = 52000000;
+    const rank = Math.round(adultFrench * (100 - weight) / 100);
     return { rank, total: adultFrench };
   };
 
   const { rank, total } = calculateRank(patrimonialWeight);
 
-  // Calcul des gains potentiels avec accompagnement
   const calculatePotentialGains = () => {
-    const currentRank = rank;
     const potentialImprovement = Math.min(30, patrimonialWeight < 50 ? 25 : patrimonialWeight < 70 ? 20 : 15);
     const newWeight = Math.min(95, patrimonialWeight + potentialImprovement);
     const newRank = Math.round(total * (100 - newWeight) / 100);
-    const placeGained = currentRank - newRank;
+    const placeGained = Math.max(rank - newRank, 1000);
     
-    return { 
-      placeGained: Math.max(placeGained, 1000), // Minimum 1000 places
-      newRank,
-      potentialImprovement 
-    };
+    return { placeGained, newRank, potentialImprovement };
   };
 
   const { placeGained, newRank, potentialImprovement } = calculatePotentialGains();
 
   const getWeightCategory = (weight: number) => {
-    if (weight >= 90) return { label: "Poids Lourd 🏆", color: "bg-yellow-500", description: "Elite patrimoniale" };
-    if (weight >= 75) return { label: "Poids Moyen+ 💪", color: "bg-green-500", description: "Très bien positionné" };
-    if (weight >= 50) return { label: "Poids Moyen 📈", color: "bg-blue-500", description: "Position correcte" };
-    if (weight >= 25) return { label: "Poids Léger+ 🎯", color: "bg-orange-500", description: "À optimiser" };
-    return { label: "Poids Plume 🪶", color: "bg-red-500", description: "Potentiel énorme" };
+    if (weight >= 90) return { label: "Elite Patrimoniale", icon: Crown, color: "from-yellow-400 to-orange-500", emoji: "👑" };
+    if (weight >= 75) return { label: "Champion", icon: Trophy, color: "from-emerald-400 to-teal-500", emoji: "🏆" };
+    if (weight >= 50) return { label: "Challenger", icon: Target, color: "from-blue-400 to-indigo-500", emoji: "🎯" };
+    if (weight >= 25) return { label: "Aspirant", icon: Rocket, color: "from-purple-400 to-pink-500", emoji: "🚀" };
+    return { label: "Débutant", icon: Star, color: "from-orange-400 to-red-500", emoji: "⭐" };
   };
 
   const category = getWeightCategory(patrimonialWeight);
 
-  const getComparisonData = () => {
-    const ageGroup = userData.age && userData.age < 35 ? "25-34 ans" : 
-                     userData.age && userData.age < 50 ? "35-49 ans" : "50+ ans";
-    
-    const cspGroup = userData.csp?.includes('Cadre') ? "Cadres" : 
-                     userData.csp?.includes('intermédiaire') ? "Prof. intermédiaires" :
-                     userData.csp?.includes('Artisan') ? "Indépendants" : "Population générale";
-
-    return { ageGroup, cspGroup };
-  };
-
-  const { ageGroup, cspGroup } = getComparisonData();
-
   return (
-    <div className="space-y-6">
-      {/* Header principal */}
-      <Card className="p-6 bg-gradient-to-r from-primary/10 to-accent/10 border-primary/30">
-        <div className="text-center space-y-4">
-          <div className="inline-flex items-center gap-3 p-3 bg-gradient-to-r from-primary to-accent rounded-lg text-white">
-            <Scale className="w-8 h-8" />
-            <div className="text-left">
-              <h2 className="text-2xl font-bold">Combien je pèse ?</h2>
-              <p className="text-sm opacity-90">Votre poids patrimonial français</p>
-            </div>
-          </div>
-          
-          <div className="bg-background/80 rounded-lg p-6 space-y-4">
-            <div className="flex items-center justify-center gap-4">
-              <div className={`p-3 rounded-full ${category.color} text-white`}>
-                <Scale className="w-6 h-6" />
-              </div>
-              <div className="text-center">
-                <div className="text-4xl font-bold text-primary">{patrimonialWeight}/100</div>
-                <Badge className={`${category.color} text-white mt-2`}>
-                  {category.label}
-                </Badge>
-              </div>
-            </div>
-            
-            <div className="text-center space-y-2">
-              <p className="text-xl font-semibold">
-                Vous êtes classé <span className="text-primary font-bold">#{rank.toLocaleString()}</span>
-              </p>
-              <p className="text-muted-foreground">
-                sur {total.toLocaleString()} adultes français ({category.description})
-              </p>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Comparaisons détaillées */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card className="p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Users className="w-6 h-6 text-primary" />
-            <h3 className="text-lg font-semibold">Vs votre génération</h3>
-          </div>
-          
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span>Français {ageGroup}</span>
-                <span className="font-semibold">{patrimonialWeight}e percentile</span>
-              </div>
-              <Progress value={patrimonialWeight} className="h-3" />
-            </div>
-            
-            <div className="bg-muted/50 p-4 rounded-lg">
-              <p className="text-sm">
-                {userData.age && userData.age < 35 
-                  ? `À votre âge, vous avez ${65 - userData.age} ans d'avance sur l'âge moyen des clients patrimoniaux (60 ans). Cet avantage temps peut vous faire gagner des centaines de milliers d'euros.`
-                  : userData.age && userData.age < 50
-                  ? `Vous êtes dans la tranche d'âge où les Français commencent à optimiser leur patrimoine. Encore ${65 - userData.age} ans avant la retraite pour maximiser vos gains.`
-                  : `Vous êtes dans la tranche d'âge où 48% des clients patrimoniaux sont des CSP+ actifs. Le timing est optimal pour sécuriser votre retraite.`
-                }
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Target className="w-6 h-6 text-primary" />
-            <h3 className="text-lg font-semibold">Vs votre catégorie</h3>
-          </div>
-          
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span>{cspGroup}</span>
-                <span className="font-semibold">Top {100 - patrimonialWeight}%</span>
-              </div>
-              <Progress value={patrimonialWeight} className="h-3" />
-            </div>
-            
-            <div className="bg-muted/50 p-4 rounded-lg">
-              <p className="text-sm">
-                {userData.csp?.includes('Cadre') 
-                  ? `Comme 21,6% d'actifs cadres, vous avez accès à l'épargne salariale et aux meilleurs dispositifs. Vous faites partie du top 25% patrimonial français.`
-                  : userData.csp?.includes('intermédiaire')
-                  ? `Votre position médiane vous donne un bon équilibre revenus/charges pour une épargne structurée et optimisée.`
-                  : userData.csp?.includes('Artisan')
-                  ? `Comme 6,5% de travailleurs non-salariés, vous épargnez plus (35%) et êtes sur-représentés chez les hauts patrimoines.`
-                  : `Votre catégorie peut grandement bénéficier d'une optimisation patrimoniale pour maximiser chaque euro épargné.`
-                }
-              </p>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Simulateur d'amélioration */}
-      <Card className="p-6 border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-accent/5">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 bg-gradient-to-r from-primary to-accent rounded-lg text-white">
-            <TrendingUp className="w-6 h-6" />
-          </div>
+    <motion.div 
+      className="space-y-8"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.6 }}
+    >
+      {/* Hero Section */}
+      <Card className="glass-card border-0 p-8 lg:p-12 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-mesh-1 opacity-30"></div>
+        <div className="absolute inset-0 bg-gradient-mesh-2 opacity-20"></div>
+        
+        <div className="relative text-center space-y-8">
           <div>
-            <h3 className="text-xl font-bold">Simulateur d'accompagnement</h3>
-            <p className="text-muted-foreground">Votre potentiel d'amélioration avec un conseiller</p>
-          </div>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div className="bg-background/80 p-4 rounded-lg">
-              <h4 className="font-semibold mb-2 flex items-center gap-2">
-                <Medal className="w-5 h-5 text-yellow-500" />
-                Votre situation actuelle
-              </h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Poids patrimonial:</span>
-                  <span className="font-semibold">{patrimonialWeight}/100</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Classement:</span>
-                  <span className="font-semibold">#{rank.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Catégorie:</span>
-                  <span className="font-semibold">{category.label}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="bg-gradient-to-r from-green-500/10 to-blue-500/10 p-4 rounded-lg border border-green-500/20">
-              <h4 className="font-semibold mb-2 flex items-center gap-2 text-green-600">
-                <ArrowUp className="w-5 h-5" />
-                Avec accompagnement pro
-              </h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Poids potentiel:</span>
-                  <span className="font-semibold text-green-600">{patrimonialWeight + potentialImprovement}/100</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Nouveau rang:</span>
-                  <span className="font-semibold text-green-600">#{newRank.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Places gagnées:</span>
-                  <span className="font-semibold text-green-600">+{placeGained.toLocaleString()}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <Separator className="my-6" />
-
-        <div className="text-center space-y-4">
-          <div className="bg-primary/10 p-4 rounded-lg">
-            <h4 className="text-lg font-bold text-primary mb-2">
-              🎯 Vous êtes {rank.toLocaleString()}e, voulez-vous être accompagné pour gagner au moins {placeGained.toLocaleString()} places ?
-            </h4>
-            <p className="text-sm text-muted-foreground mb-4">
-              Notre accompagnement personnalisé peut vous faire passer de <strong>{category.label}</strong> à 
-              <strong className="text-green-600"> {getWeightCategory(patrimonialWeight + potentialImprovement).label}</strong>
+            <h2 className="text-4xl lg:text-6xl font-black text-gradient tracking-tight">
+              Combien je pèse ?
+            </h2>
+            <p className="text-lg text-muted-foreground mt-3 font-medium">
+              Votre poids patrimonial dans l'écosystème français
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-4 text-sm">
-            <div className="bg-background/60 p-3 rounded-lg">
-              <div className="font-semibold text-primary">📊 Optimisation</div>
-              <div>Allocation, fiscalité, produits</div>
-            </div>
-            <div className="bg-background/60 p-3 rounded-lg">
-              <div className="font-semibold text-primary">🎯 Stratégie</div>
-              <div>Plan personnalisé sur 10-20 ans</div>
-            </div>
-            <div className="bg-background/60 p-3 rounded-lg">
-              <div className="font-semibold text-primary">🔄 Suivi</div>
-              <div>Ajustements réguliers</div>
+          {/* Score principal avec animation */}
+          <motion.div className="relative flex justify-center">
+            <motion.div
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              className="relative"
+            >
+              <div className="absolute inset-0 rounded-full bg-gradient-primary opacity-20 blur-2xl scale-110"></div>
+              
+              <div className="relative w-48 h-48 lg:w-64 lg:h-64 rounded-full bg-gradient-primary p-1">
+                <div className="w-full h-full rounded-full bg-background/90 flex flex-col items-center justify-center backdrop-blur-sm">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
+                  >
+                    <div className="text-5xl lg:text-7xl font-black text-gradient">
+                      {displayWeight}
+                    </div>
+                    <div className="text-2xl lg:text-3xl font-bold text-muted-foreground">
+                      /100
+                    </div>
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 1 }}
+                      className="mt-3"
+                    >
+                      <Badge className={`bg-gradient-to-r ${category.color} text-white px-4 py-2 text-sm font-bold shadow-lg`}>
+                        {category.emoji} {category.label}
+                      </Badge>
+                    </motion.div>
+                  </motion.div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+
+          {/* Stats */}
+          <AnimatePresence>
+            {showComparison && (
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="grid grid-cols-1 md:grid-cols-3 gap-6"
+              >
+                <div className="glass-card p-6 border border-primary/20">
+                  <div className="flex items-center justify-center mb-3">
+                    <div className="p-3 rounded-full bg-gradient-primary">
+                      <Trophy className="w-6 h-6 text-white" />
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-gradient">#{rank.toLocaleString()}</div>
+                    <div className="text-sm text-muted-foreground">Classement national</div>
+                  </div>
+                </div>
+
+                <div className="glass-card p-6 border border-secondary/20">
+                  <div className="flex items-center justify-center mb-3">
+                    <div className="p-3 rounded-full bg-gradient-secondary">
+                      <Users className="w-6 h-6 text-white" />
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-gradient">
+                      {userData.age && userData.age < 35 ? "25-34 ans" : 
+                       userData.age && userData.age < 50 ? "35-49 ans" : "50+ ans"}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Votre génération</div>
+                  </div>
+                </div>
+
+                <div className="glass-card p-6 border border-accent/20">
+                  <div className="flex items-center justify-center mb-3">
+                    <div className="p-3 rounded-full bg-gradient-accent">
+                      <Target className="w-6 h-6 text-white" />
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-gradient">
+                      {userData.csp?.includes('Cadre') ? "Cadres" : 
+                       userData.csp?.includes('intermédiaire') ? "Prof. inter." : "Général"}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Votre catégorie</div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </Card>
+
+      {/* CTA Section */}
+      <Card className="glass-card border-2 border-accent/30 p-8 lg:p-12 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-accent opacity-5"></div>
+        
+        <div className="relative space-y-8">
+          <div className="text-center">
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="inline-flex items-center gap-3 p-4 bg-gradient-accent rounded-2xl text-white mb-6"
+            >
+              <Zap className="w-8 h-8" />
+              <div className="text-left">
+                <h3 className="text-2xl font-black">Simulation d'accompagnement</h3>
+                <p className="text-sm opacity-90">Votre potentiel avec un expert</p>
+              </div>
+            </motion.div>
+            
+            <div className="text-3xl lg:text-4xl font-black text-center mb-8">
+              <span className="text-muted-foreground">Vous êtes </span>
+              <span className="text-gradient">#{rank.toLocaleString()}</span>
+              <span className="text-muted-foreground">, voulez-vous gagner</span>
+              <br />
+              <span className="text-gradient">+{placeGained.toLocaleString()} places</span>
+              <span className="text-muted-foreground"> ?</span>
             </div>
           </div>
 
-          <Button size="lg" className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white">
-            <Phone className="w-5 h-5 mr-2" />
-            Réserver mon bilan patrimonial gratuit
-          </Button>
-          
-          <p className="text-xs text-muted-foreground">
-            Bilan de 45min avec un conseiller senior - Gratuit et sans engagement
-          </p>
+          <div className="text-center">
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button 
+                size="lg" 
+                className="bg-gradient-hero hover:opacity-90 text-white text-lg font-bold px-12 py-6 rounded-2xl shadow-2xl hover:shadow-glow-accent transition-all duration-300"
+              >
+                <Phone className="w-6 h-6 mr-3" />
+                Réserver mon bilan patrimonial gratuit
+                <Sparkles className="w-6 h-6 ml-3" />
+              </Button>
+            </motion.div>
+            
+            <p className="text-sm text-muted-foreground mt-4">
+              Bilan de 45min avec un conseiller senior - Gratuit et sans engagement
+            </p>
+          </div>
         </div>
       </Card>
-    </div>
+    </motion.div>
   );
 }
