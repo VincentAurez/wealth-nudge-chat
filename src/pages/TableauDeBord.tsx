@@ -143,8 +143,8 @@ export default function TableauDeBord() {
 
   if (!userData || !patrimonyData) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="text-cyan-400 text-lg">Chargement de votre tableau de bord...</div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-primary text-lg">Chargement de votre tableau de bord...</div>
       </div>
     );
   }
@@ -157,7 +157,7 @@ export default function TableauDeBord() {
   const netWealth = totalAssets - totalDebts;
 
   return (
-    <div className="dark">
+    <div>
       <Joyride
         steps={tourSteps}
         run={showTour}
@@ -184,8 +184,8 @@ export default function TableauDeBord() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <h1 className="text-3xl font-bold text-slate-100">Mon Tableau de Bord</h1>
-              <p className="text-slate-400 mt-2">Vue d'ensemble de votre patrimoine</p>
+              <h1 className="text-3xl font-bold text-foreground">Mon Tableau de Bord</h1>
+              <p className="text-muted-foreground mt-2">Vue d'ensemble de votre patrimoine</p>
             </motion.div>
             
             <div className="pdf-export">
@@ -199,17 +199,17 @@ export default function TableauDeBord() {
           {/* Informations Personnelles */}
           <InfoCard title="Informations Personnelles" icon="👤">
             <div className="grid md:grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-slate-800/50 rounded-lg border border-cyan-400/20">
-                <div className="text-2xl font-bold text-cyan-400">{userData.age} ans</div>
-                <div className="text-slate-400 text-sm">Âge</div>
+              <div className="text-center p-4 bg-muted/50 rounded-lg border border-primary/20">
+                <div className="text-2xl font-bold text-primary">{userData.age} ans</div>
+                <div className="text-muted-foreground text-sm">Âge</div>
               </div>
-              <div className="text-center p-4 bg-slate-800/50 rounded-lg border border-cyan-400/20">
-                <div className="text-2xl font-bold text-cyan-400">{userData.householdStructure}</div>
-                <div className="text-slate-400 text-sm">Situation familiale</div>
+              <div className="text-center p-4 bg-muted/50 rounded-lg border border-primary/20">
+                <div className="text-2xl font-bold text-primary">{userData.householdStructure}</div>
+                <div className="text-muted-foreground text-sm">Situation familiale</div>
               </div>
-              <div className="text-center p-4 bg-slate-800/50 rounded-lg border border-cyan-400/20">
-                <div className="text-2xl font-bold text-cyan-400">{userData.csp}</div>
-                <div className="text-slate-400 text-sm">Catégorie socio-professionnelle</div>
+              <div className="text-center p-4 bg-muted/50 rounded-lg border border-primary/20">
+                <div className="text-2xl font-bold text-primary">{userData.csp}</div>
+                <div className="text-muted-foreground text-sm">Catégorie socio-professionnelle</div>
               </div>
             </div>
           </InfoCard>
