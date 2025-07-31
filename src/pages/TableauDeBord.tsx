@@ -9,6 +9,7 @@ import { RiskHorizonLine } from "@/components/graphs/RiskHorizonLine";
 import { LossBar } from "@/components/graphs/LossBar";
 import { PdfExportButton } from "@/components/PdfExportButton";
 import { StickyCTA } from "@/components/StickyCTA";
+import { WeightCalculator } from "@/components/WeightCalculator";
 import { supabase } from "@/integrations/supabase/client";
 import { UserData } from "@/components/PatrimonialChat";
 
@@ -191,6 +192,9 @@ export default function TableauDeBord() {
               <PdfExportButton userData={userData} patrimonyData={patrimonyData} />
             </div>
           </div>
+
+          {/* Simulateur Patrimonial */}
+          <WeightCalculator userData={userData} />
 
           {/* Informations Personnelles */}
           <InfoCard title="Informations Personnelles" icon="👤">
